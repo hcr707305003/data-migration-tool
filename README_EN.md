@@ -153,6 +153,64 @@ Open browser and visit: `http://localhost:8080`
 | `DATA_DIR` | ./data | Data storage directory |
 | `STATUS_CHECK_INTERVAL` | 300 | Data source status check interval (seconds) |
 
+#### Configuration Examples
+
+**Method 1: Environment Variables**
+
+**Windows:**
+```cmd
+set PORT=9090
+set DATA_DIR=D:\migration-data
+set MAX_CONCURRENT_TASKS=5
+set MAX_CONCURRENT_TABLES=3
+set DEFAULT_BATCH_SIZE=2000
+data-migration-tool.exe
+```
+
+**Linux/macOS:**
+```bash
+export PORT=9090
+export DATA_DIR=/opt/migration-data
+export MAX_CONCURRENT_TASKS=5
+export MAX_CONCURRENT_TABLES=3
+export DEFAULT_BATCH_SIZE=2000
+./data-migration-tool
+```
+
+**Method 2: .env File (Recommended)**
+
+Create a `.env` file in the program root directory:
+```bash
+# Web service configuration
+PORT=9090
+
+# Data directories
+DATA_DIR=./data
+LOG_DIR=./logs
+
+# Concurrency configuration
+MAX_CONCURRENT_TASKS=5
+MAX_CONCURRENT_TABLES=3
+MAX_CONCURRENT_BATCH=4
+
+# Performance configuration
+DEFAULT_BATCH_SIZE=2000
+CONNECTION_TIMEOUT=30
+QUERY_TIMEOUT=300
+
+# Status check interval (seconds)
+STATUS_CHECK_INTERVAL=300
+```
+
+Then run the program directly:
+```bash
+# Windows
+data-migration-tool.exe
+
+# Linux/macOS
+./data-migration-tool
+```
+
 ### 🔧 Concurrency Configuration
 
 The system supports three-level concurrency control, configurable via the "Concurrency Settings" in the web interface:
@@ -375,19 +433,6 @@ psql -h host -p port -U username -d database
 # Set smaller batch size
 export DEFAULT_BATCH_SIZE=500
 export MAX_CONCURRENT_BATCH=2
-```
-
-### Log Analysis
-
-```bash
-# View error logs
-tail -f logs/error.log
-
-# Search for specific errors
-grep "ERROR" logs/*.log
-
-# Analyze performance logs
-grep "duration" logs/access.log | sort -k3 -nr
 ```
 
 ## 📊 Project Statistics

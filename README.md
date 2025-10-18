@@ -139,28 +139,33 @@ go run main.go
 ### ⚙️ 环境变量配置
 
 #### 基础配置
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `PORT` | 8080 | Web服务端口 |
-| `DATA_DIR` | ./data | 数据存储目录 |
-| `LOG_DIR` | ./logs | 日志存储目录 |
-| `STATUS_CHECK_INTERVAL` | 300 | 数据源状态检查间隔（秒） |
+
+| 变量名                  | 默认值 | 说明                     |
+| ----------------------- | ------ | ------------------------ |
+| `PORT`                  | 8080   | Web 服务端口             |
+| `DATA_DIR`              | ./data | 数据存储目录             |
+| `LOG_DIR`               | ./logs | 日志存储目录             |
+| `STATUS_CHECK_INTERVAL` | 300    | 数据源状态检查间隔（秒） |
 
 #### 并发配置
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `MAX_CONCURRENT_TASKS` | 3 | 最大并发任务数 |
-| `MAX_CONCURRENT_TABLES` | 2 | 每任务最大并发表数 |
-| `MAX_CONCURRENT_BATCHES` | 4 | 每表最大并发批次数 |
+
+| 变量名                   | 默认值 | 说明               |
+| ------------------------ | ------ | ------------------ |
+| `MAX_CONCURRENT_TASKS`   | 3      | 最大并发任务数     |
+| `MAX_CONCURRENT_TABLES`  | 2      | 每任务最大并发表数 |
+| `MAX_CONCURRENT_BATCHES` | 4      | 每表最大并发批次数 |
 
 #### 性能配置
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `DEFAULT_BATCH_SIZE` | 1000 | 默认批处理大小 |
-| `CONNECTION_TIMEOUT` | 30 | 连接超时时间（秒） |
-| `QUERY_TIMEOUT` | 300 | 查询超时时间（秒） |
+
+| 变量名               | 默认值 | 说明               |
+| -------------------- | ------ | ------------------ |
+| `DEFAULT_BATCH_SIZE` | 1000   | 默认批处理大小     |
+| `CONNECTION_TIMEOUT` | 30     | 连接超时时间（秒） |
+| `QUERY_TIMEOUT`      | 300    | 查询超时时间（秒） |
 
 #### 配置示例
+
+**方法 1：环境变量**
 
 **Windows:**
 
@@ -181,6 +186,42 @@ export DATA_DIR=/opt/migration-data
 export MAX_CONCURRENT_TASKS=5
 export MAX_CONCURRENT_TABLES=3
 export DEFAULT_BATCH_SIZE=2000
+./data-migration-tool
+```
+
+**方法 2：.env 文件（推荐）**
+
+在程序根目录创建 `.env` 文件：
+
+```bash
+# Web服务配置
+PORT=9090
+
+# 数据目录
+DATA_DIR=./data
+LOG_DIR=./logs
+
+# 并发配置
+MAX_CONCURRENT_TASKS=5
+MAX_CONCURRENT_TABLES=3
+MAX_CONCURRENT_BATCH=4
+
+# 性能配置
+DEFAULT_BATCH_SIZE=2000
+CONNECTION_TIMEOUT=30
+QUERY_TIMEOUT=300
+
+# 状态检查间隔（秒）
+STATUS_CHECK_INTERVAL=300
+```
+
+然后直接运行程序：
+
+```bash
+# Windows
+data-migration-tool.exe
+
+# Linux/macOS
 ./data-migration-tool
 ```
 
@@ -312,19 +353,6 @@ export DEFAULT_BATCH_SIZE=500
 export MAX_CONCURRENT_BATCH=2
 ```
 
-### 日志分析
-
-```bash
-# 查看错误日志
-tail -f logs/error.log
-
-# 搜索特定错误
-grep "ERROR" logs/*.log
-
-# 分析性能日志
-grep "duration" logs/access.log | sort -k3 -nr
-```
-
 ## 🤝 贡献指南
 
 我们欢迎所有形式的贡献！
@@ -444,19 +472,6 @@ psql -h host -p port -U username -d database
 # 设置较小的批处理大小
 export DEFAULT_BATCH_SIZE=500
 export MAX_CONCURRENT_BATCH=2
-```
-
-### 日志分析
-
-```bash
-# 查看错误日志
-tail -f logs/error.log
-
-# 搜索特定错误
-grep "ERROR" logs/*.log
-
-# 分析性能日志
-grep "duration" logs/access.log | sort -k3 -nr
 ```
 
 ## 📊 项目统计
