@@ -8,6 +8,11 @@ services:
       - "8080:8080"
     # 使用init进程处理信号
     init: true
+    # 网络配置，允许访问宿主机服务
+    network_mode: "host"
+    # 或者使用extra_hosts（推荐）
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
     environment:
       - PORT=8080
       - DATA_DIR=/app/data

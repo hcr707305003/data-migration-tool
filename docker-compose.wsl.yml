@@ -10,11 +10,11 @@ services:
       - "8080:8080"
     # 使用init进程处理信号
     init: true
-    # 网络配置，允许访问宿主机服务
-    network_mode: "host"
-    # 或者使用extra_hosts（推荐）
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
+    # WSL环境下访问宿主机的配置
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "mysql-host:host-gateway"
+      - "postgres-host:host-gateway"
     environment:
       - PORT=8080
       - DATA_DIR=/app/data
@@ -27,6 +27,9 @@ services:
       - QUERY_TIMEOUT=300
       - STATUS_CHECK_INTERVAL=300
       - TZ=Asia/Shanghai
+      # WSL环境下的数据库连接示例
+      - MYSQL_HOST=host.docker.internal
+      - POSTGRES_HOST=host.docker.internal
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -34,5 +37,5 @@ services:
     restart: unless-stopped
 
 networks:
-  migration-network:
+  default:
     driver: bridge

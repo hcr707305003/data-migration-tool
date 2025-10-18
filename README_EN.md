@@ -261,7 +261,18 @@ docker-compose logs -f
 docker-compose down
 ```
 
-**One-Click Start (Windows)**
+**WSL Environment Deployment (Recommended)**
+
+```bash
+# Configure network for WSL environment
+chmod +x setup-wsl-network.sh
+./setup-wsl-network.sh
+
+# Start with WSL optimized configuration
+docker-compose -f docker-compose.wsl.yml up -d
+```
+
+**Windows Direct Deployment**
 
 ```cmd
 REM Create directories
@@ -349,26 +360,40 @@ docker-compose logs -f data-migration-tool
 docker-compose exec data-migration-tool sh
 ```
 
-### 🛠️ Permission Issues Resolution
+### 🛠️ Common Issues Resolution
 
-**Automatic Permission Handling:**
+**Permission Issues:**
 The container automatically detects and handles permission issues on startup.
 
-**Manual Permission Resolution:**
+**WSL Network Issues:**
 
 ```bash
-# Issue 1: Data directory permission issues
-# Solution: Run preparation script
+# Issue 1: Container cannot access host MySQL/PostgreSQL
+# Solution: Use WSL network configuration
+./setup-wsl-network.sh
+docker-compose -f docker-compose.wsl.yml up -d
+
+# Issue 2: Manual host access configuration
+# Use in data source config: host.docker.internal
+# MySQL: host.docker.internal:3306
+# PostgreSQL: host.docker.internal:5432
+
+# Issue 3: Check if host services are accessible
+docker exec -it data-migration-tool ping host.docker.internal
+docker exec -it data-migration-tool telnet host.docker.internal 3306
+```
+
+**Other Issues:**
+
+```bash
+# Issue 4: Data directory permission issues
 ./prepare-docker.sh
 
-# Issue 2: Manually set directory permissions
-chmod 755 data logs
-
-# Issue 3: SELinux permission issues (CentOS/RHEL)
+# Issue 5: SELinux permission issues (CentOS/RHEL)
 sudo setsebool -P container_manage_cgroup on
 sudo chcon -Rt svirt_sandbox_file_t data logs
 
-# Issue 4: Check container startup logs
+# Issue 6: Check container startup logs
 docker-compose logs data-migration-tool
 ```
 

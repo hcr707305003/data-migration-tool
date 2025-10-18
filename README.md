@@ -268,7 +268,18 @@ docker-compose logs -f
 docker-compose down
 ```
 
-**一键启动（Windows）**
+**WSL 环境部署（推荐）**
+
+```bash
+# WSL环境下配置网络
+chmod +x setup-wsl-network.sh
+./setup-wsl-network.sh
+
+# 使用WSL优化配置启动
+docker-compose -f docker-compose.wsl.yml up -d
+```
+
+**Windows 直接部署**
 
 ```cmd
 REM 创建目录
@@ -300,7 +311,7 @@ docker run -d \
 
 ### 🔧 Docker 配置
 
-**方法1：环境变量配置**
+**方法 1：环境变量配置**
 
 ```yaml
 # docker-compose.yml
@@ -313,7 +324,7 @@ environment:
   - DEFAULT_BATCH_SIZE=1000
 ```
 
-**方法2：使用.env文件（推荐）**
+**方法 2：使用.env 文件（推荐）**
 
 ```bash
 # 复制示例配置文件
@@ -332,8 +343,6 @@ volumes:
   - ./logs:/app/logs # 日志文件
   - ./.env:/app/.env:ro # 环境配置文件（只读）
 ```
-
-
 
 ### 🔍 Docker 管理命令
 
@@ -356,26 +365,40 @@ docker-compose logs -f data-migration-tool
 docker-compose exec data-migration-tool sh
 ```
 
-### 🛠️ 权限问题解决
+### 🛠️ 常见问题解决
 
-**自动权限处理：**
+**权限问题：**
 容器启动时会自动检测和处理权限问题，无需手动干预。
 
-**手动解决权限问题：**
+**WSL 网络问题：**
 
 ```bash
-# 问题1: 数据目录权限不足
-# 解决方案: 运行准备脚本
+# 问题1: 容器无法访问宿主机MySQL/PostgreSQL
+# 解决方案: 使用WSL网络配置
+./setup-wsl-network.sh
+docker-compose -f docker-compose.wsl.yml up -d
+
+# 问题2: 手动配置宿主机访问
+# 在数据源配置中使用: host.docker.internal
+# MySQL: host.docker.internal:3306
+# PostgreSQL: host.docker.internal:5432
+
+# 问题3: 检查宿主机服务是否可访问
+docker exec -it data-migration-tool ping host.docker.internal
+docker exec -it data-migration-tool telnet host.docker.internal 3306
+```
+
+**其他问题：**
+
+```bash
+# 问题4: 数据目录权限不足
 ./prepare-docker.sh
 
-# 问题2: 手动设置目录权限
-chmod 755 data logs
-
-# 问题3: SELinux权限问题（CentOS/RHEL）
+# 问题5: SELinux权限问题（CentOS/RHEL）
 sudo setsebool -P container_manage_cgroup on
 sudo chcon -Rt svirt_sandbox_file_t data logs
 
-# 问题4: 查看容器启动日志
+# 问题6: 查看容器启动日志
 docker-compose logs data-migration-tool
 ```
 
