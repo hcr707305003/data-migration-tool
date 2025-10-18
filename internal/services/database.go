@@ -33,13 +33,13 @@ func (s *DatabaseService) TestConnection(ds models.DataSource) error {
 	if connStr == "" {
 		return fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	db, err := sql.Open(ds.Type, connStr)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	
+
 	return db.Ping()
 }
 
@@ -48,13 +48,13 @@ func (s *DatabaseService) GetTables(ds models.DataSource) ([]string, error) {
 	if connStr == "" {
 		return nil, fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	db, err := sql.Open(ds.Type, connStr)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
-	
+
 	var query string
 	switch ds.Type {
 	case "mysql":
@@ -64,13 +64,13 @@ func (s *DatabaseService) GetTables(ds models.DataSource) ([]string, error) {
 	default:
 		return nil, fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var tables []string
 	for rows.Next() {
 		var tableName string
@@ -79,7 +79,7 @@ func (s *DatabaseService) GetTables(ds models.DataSource) ([]string, error) {
 		}
 		tables = append(tables, tableName)
 	}
-	
+
 	return tables, nil
 }
 
@@ -96,13 +96,13 @@ func (s *DatabaseService) GetColumns(ds models.DataSource, tableName string) ([]
 	if connStr == "" {
 		return nil, fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	db, err := sql.Open(ds.Type, connStr)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
-	
+
 	var query string
 	switch ds.Type {
 	case "mysql":
@@ -122,19 +122,19 @@ func (s *DatabaseService) GetColumns(ds models.DataSource, tableName string) ([]
 	default:
 		return nil, fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	var rows *sql.Rows
 	if ds.Type == "mysql" {
 		rows, err = db.Query(query, ds.Database, tableName)
 	} else {
 		rows, err = db.Query(query, tableName)
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var columns []ColumnInfo
 	for rows.Next() {
 		var col ColumnInfo
@@ -147,7 +147,7 @@ func (s *DatabaseService) GetColumns(ds models.DataSource, tableName string) ([]
 		col.Generated = generated == 1
 		columns = append(columns, col)
 	}
-	
+
 	return columns, nil
 }
 
@@ -156,6 +156,6 @@ func (s *DatabaseService) GetConnection(ds models.DataSource) (*sql.DB, error) {
 	if connStr == "" {
 		return nil, fmt.Errorf("不支持的数据库类型: %s", ds.Type)
 	}
-	
+
 	return sql.Open(ds.Type, connStr)
 }

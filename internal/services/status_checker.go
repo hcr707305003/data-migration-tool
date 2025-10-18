@@ -30,23 +30,23 @@ func NewStatusChecker(store *storage.JSONStorage) *StatusChecker {
 func (sc *StatusChecker) Start(interval time.Duration) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	
+
 	if sc.running {
 		log.Println("状态检查器已在运行中")
 		return
 	}
-	
+
 	if interval <= 0 {
 		log.Println("状态检查间隔无效，跳过启动状态检查器")
 		return
 	}
-	
+
 	sc.ticker = time.NewTicker(interval)
 	sc.running = true
-	
+
 	go sc.run()
 	log.Printf("数据源状态检查器已启动，检查间隔: %v", interval)
-	
+
 	// 启动时立即执行一次检查
 	go func() {
 		time.Sleep(5 * time.Second) // 等待5秒让系统完全启动
@@ -58,11 +58,11 @@ func (sc *StatusChecker) Start(interval time.Duration) {
 func (sc *StatusChecker) Stop() {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	
+
 	if !sc.running {
 		return
 	}
-	
+
 	sc.running = false
 	sc.ticker.Stop()
 	sc.stopChan <- true
@@ -88,7 +88,7 @@ func (sc *StatusChecker) checkAllDataSources() {
 		log.Printf("获取数据源列表失败: %v", err)
 		return
 	}
-	
+
 	var wg sync.WaitGroup
 	for i := range dataSources {
 		wg.Add(1)
@@ -97,9 +97,9 @@ func (sc *StatusChecker) checkAllDataSources() {
 			sc.checkDataSourceStatus(&dataSources[index])
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// 批量更新状态
 	for _, ds := range dataSources {
 		if err := sc.store.SaveDataSource(ds); err != nil {
@@ -111,20 +111,20 @@ func (sc *StatusChecker) checkAllDataSources() {
 // 检查单个数据源状态
 func (sc *StatusChecker) checkDataSourceStatus(ds *models.DataSource) {
 	previousStatus := ds.Status
-	
+
 	// 设置检查中状态（但不保存到存储，只在内存中标记）
 	currentStatus := "checking"
-	
+
 	// 创建带超时的上下文
 	done := make(chan bool, 1)
 	var err error
-	
+
 	go func() {
 		// 测试连接
 		err = sc.dbService.TestConnection(*ds)
 		done <- true
 	}()
-	
+
 	// 等待结果或超时（30秒）
 	select {
 	case <-done:
@@ -137,10 +137,10 @@ func (sc *StatusChecker) checkDataSourceStatus(ds *models.DataSource) {
 		currentStatus = "disconnected"
 		err = fmt.Errorf("连接超时")
 	}
-	
+
 	ds.Status = currentStatus
 	ds.UpdateAt = time.Now()
-	
+
 	// 只在状态变化时记录日志
 	if previousStatus != currentStatus && previousStatus != "checking" {
 		if err != nil {
@@ -157,19 +157,19 @@ func (sc *StatusChecker) CheckSingleDataSource(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	for i, ds := range dataSources {
 		if ds.ID == id {
 			sc.checkDataSourceStatus(&dataSources[i])
-			
+
 			// 保存更新后的状态
 			if err := sc.store.SaveDataSource(dataSources[i]); err != nil {
 				return "", err
 			}
-			
+
 			return dataSources[i].Status, nil
 		}
 	}
-	
+
 	return "", nil
 }

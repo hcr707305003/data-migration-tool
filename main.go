@@ -33,60 +33,60 @@ var (
 func main() {
 	// 显示版本信息
 	showBanner()
-	
+
 	// 加载环境变量文件
 	if err := godotenv.Load(); err != nil {
 		log.Printf("警告: 无法加载.env文件: %v (将使用默认配置)", err)
 	}
-	
+
 	// 初始化配置
 	cfg := config.New()
 	log.Printf("配置加载完成，数据目录: %s，日志目录: %s", cfg.DataDir, cfg.LogDir)
-	
+
 	// 检查并创建必要的目录结构
 	if err := ensureDirectories(cfg); err != nil {
 		log.Fatalf("创建目录结构失败: %v", err)
 	}
-	
+
 	// 初始化日志系统
 	appLogger, err := logger.SetupGlobalLogger(cfg.LogDir)
 	if err != nil {
 		log.Fatalf("初始化日志系统失败: %v", err)
 	}
 	defer appLogger.Close()
-	
+
 	log.Printf("日志系统初始化完成，日志文件: %s/app-%s.log", cfg.LogDir, getCurrentDate())
-	
+
 	// 显示配置信息
-	log.Printf("并发配置 - 最大任务数: %d, 每任务最大表数: %d, 每表最大批次数: %d", 
+	log.Printf("并发配置 - 最大任务数: %d, 每任务最大表数: %d, 每表最大批次数: %d",
 		cfg.MaxConcurrentTasks, cfg.MaxConcurrentTables, cfg.MaxConcurrentBatches)
-	log.Printf("性能配置 - 默认批处理大小: %d, 连接超时: %ds, 查询超时: %ds", 
+	log.Printf("性能配置 - 默认批处理大小: %d, 连接超时: %ds, 查询超时: %ds",
 		cfg.DefaultBatchSize, cfg.ConnectionTimeout, cfg.QueryTimeout)
-	
+
 	// 初始化存储（会自动创建数据文件）
 	store := storage.NewJSONStorage(cfg.DataDir)
 	log.Printf("存储层初始化完成")
-	
+
 	// 启动数据源状态检查器
 	statusChecker := services.NewStatusChecker(store)
 	statusChecker.Start(cfg.StatusCheckInterval)
 	log.Printf("数据源状态检查器启动，检查间隔: %v (%d秒)", cfg.StatusCheckInterval, cfg.StatusCheckIntervalSecs)
-	
+
 	// 设置Gin模式
 	gin.SetMode(gin.ReleaseMode)
-	
+
 	// 创建路由
 	router := gin.Default()
-	
+
 	// 设置Web资源（优先使用嵌入式资源）
 	setupWebAssets(router)
-	
+
 	// 初始化API路由
 	api.SetupRoutes(router, store, cfg)
-	
+
 	// 显示启动信息
 	showStartupInfo(cfg.Port)
-	
+
 	// 启动服务器
 	log.Fatal(router.Run(":" + cfg.Port))
 }
@@ -111,22 +111,22 @@ func ensureDirectories(cfg *config.Config) error {
 		cfg.DataDir,
 		cfg.LogDir,
 	}
-	
+
 	// 开发模式下需要的额外目录
 	if isLocalWebAssetsAvailable() {
 		runtimeDirectories = append(runtimeDirectories, []string{
 			"./web",
-			"./web/static", 
+			"./web/static",
 			"./web/templates",
 		}...)
 	}
-	
+
 	for _, dir := range runtimeDirectories {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("创建目录 %s 失败: %v", dir, err)
 		}
 	}
-	
+
 	log.Printf("目录结构检查完成")
 	return nil
 }
@@ -140,23 +140,23 @@ func setupWebAssets(router *gin.Engine) {
 		router.LoadHTMLGlob("web/templates/*")
 		return
 	}
-	
+
 	// 使用嵌入式资源（生产模式）
 	log.Printf("使用嵌入式Web资源文件")
-	
+
 	// 设置静态文件服务
 	staticFS, err := fs.Sub(embeddedFiles, "web/static")
 	if err != nil {
 		log.Fatalf("无法加载嵌入式静态文件: %v", err)
 	}
 	router.StaticFS("/static", http.FS(staticFS))
-	
+
 	// 设置模板
 	templatesFS, err := fs.Sub(embeddedFiles, "web/templates")
 	if err != nil {
 		log.Fatalf("无法加载嵌入式模板文件: %v", err)
 	}
-	
+
 	tmpl := template.Must(template.New("").ParseFS(templatesFS, "*.html"))
 	router.SetHTMLTemplate(tmpl)
 }
@@ -171,13 +171,13 @@ func isLocalWebAssetsAvailable() bool {
 		"./web/static/css/main.css",
 		"./web/static/js/common.js",
 	}
-	
+
 	for _, path := range requiredPaths {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return false
 		}
 	}
-	
+
 	return true
 }
 

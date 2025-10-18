@@ -13,15 +13,15 @@ import (
 )
 
 type Handler struct {
-	store           *storage.JSONStorage
-	config          *config.Config
+	store            *storage.JSONStorage
+	config           *config.Config
 	migrationService *services.MigrationService
 }
 
 func NewHandler(store *storage.JSONStorage, cfg *config.Config) *Handler {
 	return &Handler{
-		store:           store,
-		config:          cfg,
+		store:            store,
+		config:           cfg,
 		migrationService: services.NewMigrationService(store, cfg),
 	}
 }
@@ -92,21 +92,21 @@ func (h *Handler) CreateDataSource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ds.ID = generateUUID()
 	ds.CreateAt = time.Now()
 	ds.UpdateAt = time.Now()
-	
+
 	// 如果没有设置enabled字段，默认为启用
 	if !ds.Enabled {
 		ds.Enabled = true
 	}
-	
+
 	if err := h.store.SaveDataSource(ds); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, ds)
 }
 
@@ -117,15 +117,15 @@ func (h *Handler) UpdateDataSource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ds.ID = id
 	ds.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveDataSource(ds); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, ds)
 }
 
@@ -145,7 +145,7 @@ func (h *Handler) TestDataSource(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	var ds *models.DataSource
 	var dsIndex int
 	for i, source := range dataSources {
@@ -155,43 +155,43 @@ func (h *Handler) TestDataSource(c *gin.Context) {
 			break
 		}
 	}
-	
+
 	if ds == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "数据源不存在"})
 		return
 	}
-	
+
 	dbService := services.NewDatabaseService()
 	var status string
 	var message string
-	
+
 	if err := dbService.TestConnection(*ds); err != nil {
 		status = "disconnected"
 		message = "连接失败: " + err.Error()
-		
+
 		// 更新状态到缓存
 		dataSources[dsIndex].Status = status
 		dataSources[dsIndex].UpdateAt = time.Now()
 		h.store.SaveDataSource(dataSources[dsIndex])
-		
+
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": message,
+			"error":  message,
 			"status": status,
 		})
 		return
 	}
-	
+
 	status = "connected"
 	message = "连接成功"
-	
+
 	// 更新状态到缓存
 	dataSources[dsIndex].Status = status
 	dataSources[dsIndex].UpdateAt = time.Now()
 	h.store.SaveDataSource(dataSources[dsIndex])
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": message,
-		"status": status,
+		"status":  status,
 	})
 }
 
@@ -202,20 +202,20 @@ func (h *Handler) TestDataSourceConnection(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	dbService := services.NewDatabaseService()
-	
+
 	if err := dbService.TestConnection(ds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "连接失败: " + err.Error(),
+			"error":  "连接失败: " + err.Error(),
 			"status": "disconnected",
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "连接成功",
-		"status": "connected",
+		"status":  "connected",
 	})
 }
 
@@ -226,7 +226,7 @@ func (h *Handler) GetTables(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	var ds *models.DataSource
 	for _, source := range dataSources {
 		if source.ID == id {
@@ -234,32 +234,32 @@ func (h *Handler) GetTables(c *gin.Context) {
 			break
 		}
 	}
-	
+
 	if ds == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "数据源不存在"})
 		return
 	}
-	
+
 	dbService := services.NewDatabaseService()
 	tables, err := dbService.GetTables(*ds)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, tables)
 }
 
 func (h *Handler) GetColumns(c *gin.Context) {
 	id := c.Param("id")
 	tableName := c.Param("table")
-	
+
 	dataSources, err := h.store.GetDataSources()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	var ds *models.DataSource
 	for _, source := range dataSources {
 		if source.ID == id {
@@ -267,19 +267,19 @@ func (h *Handler) GetColumns(c *gin.Context) {
 			break
 		}
 	}
-	
+
 	if ds == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "数据源不存在"})
 		return
 	}
-	
+
 	dbService := services.NewDatabaseService()
 	columns, err := dbService.GetColumns(*ds, tableName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, columns)
 }
 
@@ -299,21 +299,21 @@ func (h *Handler) CreateFilterTemplate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	template.ID = generateUUID()
 	template.CreateAt = time.Now()
 	template.UpdateAt = time.Now()
-	
+
 	// 如果没有设置enabled字段，默认为启用
 	if !template.Enabled {
 		template.Enabled = true
 	}
-	
+
 	if err := h.store.SaveFilterTemplate(template); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, template)
 }
 
@@ -324,15 +324,15 @@ func (h *Handler) UpdateFilterTemplate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	template.ID = id
 	template.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveFilterTemplate(template); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, template)
 }
 
@@ -361,21 +361,21 @@ func (h *Handler) CreateMaskingRule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	rule.ID = generateUUID()
 	rule.CreateAt = time.Now()
 	rule.UpdateAt = time.Now()
-	
+
 	// 如果没有设置enabled字段，默认为启用
 	if !rule.Enabled {
 		rule.Enabled = true
 	}
-	
+
 	if err := h.store.SaveMaskingRule(rule); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, rule)
 }
 
@@ -386,15 +386,15 @@ func (h *Handler) UpdateMaskingRule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	rule.ID = id
 	rule.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveMaskingRule(rule); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, rule)
 }
 
@@ -405,7 +405,7 @@ func (h *Handler) DeleteMaskingRule(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
-}// 表迁移配置管理
+} // 表迁移配置管理
 
 func (h *Handler) GetTableMigrations(c *gin.Context) {
 	migrations, err := h.store.GetTableMigrations()
@@ -422,20 +422,20 @@ func (h *Handler) CreateTableMigration(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	migration.ID = generateUUID()
 	migration.CreateAt = time.Now()
 	migration.UpdateAt = time.Now()
-	
+
 	if migration.BatchSize <= 0 {
 		migration.BatchSize = 1000
 	}
-	
+
 	if err := h.store.SaveTableMigration(migration); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, migration)
 }
 
@@ -446,15 +446,15 @@ func (h *Handler) UpdateTableMigration(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	migration.ID = id
 	migration.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveTableMigration(migration); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, migration)
 }
 
@@ -483,72 +483,72 @@ func (h *Handler) CreateMigrationTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	task.ID = generateUUID()
 	if task.Status == "" {
 		task.Status = "draft" // 默认为草稿状态
 	}
 	task.Progress = 0
 	task.CreateAt = time.Now()
-	
+
 	if err := h.store.SaveMigrationTask(task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, task)
 }
 
 func (h *Handler) StartMigrationTask(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	if err := h.migrationService.StartTask(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "任务已启动"})
 }
 
 func (h *Handler) StopMigrationTask(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	if err := h.migrationService.StopTask(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "任务已停止"})
 }
 
 func (h *Handler) GetMigrationTaskStatus(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	tasks, err := h.store.GetMigrationTasks()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	for _, task := range tasks {
 		if task.ID == id {
 			c.JSON(http.StatusOK, task)
 			return
 		}
 	}
-	
+
 	c.JSON(http.StatusNotFound, gin.H{"error": "任务不存在"})
 }
 
 func (h *Handler) GetMigrationTaskRecords(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	records, err := h.store.GetMigrationRecordsByTaskID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, records)
 }
 
@@ -560,15 +560,15 @@ func (h *Handler) UpdateMigrationTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	task.ID = id
 	task.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveMigrationTask(task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, task)
 }
 
@@ -610,17 +610,17 @@ func (h *Handler) StartMigration(c *gin.Context) {
 
 	// 创建迁移任务
 	task := models.MigrationTask{
-		ID:               generateUUID(),
-		Name:             config.Name,
-		SourceDatabase:   config.SourceDatabase,
-		TargetDatabase:   config.TargetDatabase,
+		ID:                generateUUID(),
+		Name:              config.Name,
+		SourceDatabase:    config.SourceDatabase,
+		TargetDatabase:    config.TargetDatabase,
 		DuplicateStrategy: config.DuplicateStrategy,
-		TableStrategy:    config.TableStrategy,
-		Tables:           config.Tables,
-		Status:           "initializing",
-		Progress:         0,
-		CreateAt:         time.Now(),
-		StartAt:          time.Now(),
+		TableStrategy:     config.TableStrategy,
+		Tables:            config.Tables,
+		Status:            "initializing",
+		Progress:          0,
+		CreateAt:          time.Now(),
+		StartAt:           time.Now(),
 	}
 
 	// 保存任务
@@ -642,13 +642,13 @@ func (h *Handler) StartMigration(c *gin.Context) {
 // 获取迁移状态
 func (h *Handler) GetMigrationStatus(c *gin.Context) {
 	taskId := c.Param("taskId")
-	
+
 	tasks, err := h.store.GetMigrationTasks()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	for _, task := range tasks {
 		if task.ID == taskId {
 			// 构建状态响应
@@ -661,7 +661,7 @@ func (h *Handler) GetMigrationStatus(c *gin.Context) {
 				"startTime":        task.StartAt,
 				"logs":             []gin.H{}, // 简化版本，实际可以从日志存储中获取
 			}
-			
+
 			// 根据状态添加一些模拟日志
 			if task.Status == "running" {
 				status["logs"] = []gin.H{
@@ -680,24 +680,24 @@ func (h *Handler) GetMigrationStatus(c *gin.Context) {
 					},
 				}
 			}
-			
+
 			c.JSON(http.StatusOK, status)
 			return
 		}
 	}
-	
+
 	c.JSON(http.StatusNotFound, gin.H{"error": "任务不存在"})
 }
 
 // 暂停迁移任务
 func (h *Handler) PauseMigration(c *gin.Context) {
 	taskId := c.Param("taskId")
-	
+
 	if err := h.migrationService.PauseTask(taskId); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "任务已暂停",
@@ -707,12 +707,12 @@ func (h *Handler) PauseMigration(c *gin.Context) {
 // 停止迁移任务
 func (h *Handler) StopMigration(c *gin.Context) {
 	taskId := c.Param("taskId")
-	
+
 	if err := h.migrationService.StopTask(taskId); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "任务已停止",
@@ -732,14 +732,14 @@ func (h *Handler) SetConcurrencyLimits(c *gin.Context) {
 		MaxTables int `json:"max_tables"`
 		MaxBatch  int `json:"max_batch"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&params); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数格式错误: " + err.Error()})
 		return
 	}
-	
+
 	h.migrationService.SetConcurrencyLimits(params.MaxTasks, params.MaxTables, params.MaxBatch)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "并发参数设置成功",
@@ -768,16 +768,16 @@ func (h *Handler) CreateMaskingType(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	maskingType.ID = generateUUID()
 	maskingType.CreateAt = time.Now()
 	maskingType.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveMaskingType(maskingType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, maskingType)
 }
 
@@ -788,15 +788,15 @@ func (h *Handler) UpdateMaskingType(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	maskingType.ID = id
 	maskingType.UpdateAt = time.Now()
-	
+
 	if err := h.store.SaveMaskingType(maskingType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, maskingType)
 }
 

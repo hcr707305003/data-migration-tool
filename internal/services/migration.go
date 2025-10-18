@@ -31,11 +31,11 @@ type BatchResult struct {
 }
 
 type MigrationService struct {
-	store       *storage.JSONStorage
-	config      *config.Config
-	dbService   *DatabaseService
+	store        *storage.JSONStorage
+	config       *config.Config
+	dbService    *DatabaseService
 	runningTasks map[string]chan bool
-	mutex       sync.RWMutex
+	mutex        sync.RWMutex
 	// 并发控制
 	maxConcurrentTasks  int // 最大并发任务数
 	maxConcurrentTables int // 每个任务最大并发表数
@@ -44,9 +44,9 @@ type MigrationService struct {
 
 func NewMigrationService(store *storage.JSONStorage, cfg *config.Config) *MigrationService {
 	return &MigrationService{
-		store:       store,
-		config:      cfg,
-		dbService:   NewDatabaseService(),
+		store:        store,
+		config:       cfg,
+		dbService:    NewDatabaseService(),
 		runningTasks: make(map[string]chan bool),
 		// 从配置读取并发设置
 		maxConcurrentTasks:  cfg.MaxConcurrentTasks,
@@ -58,23 +58,23 @@ func NewMigrationService(store *storage.JSONStorage, cfg *config.Config) *Migrat
 func (s *MigrationService) StartTask(taskID string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	// 检查任务是否已在运行
 	if _, exists := s.runningTasks[taskID]; exists {
 		return fmt.Errorf("任务已在运行中")
 	}
-	
+
 	// 检查并发任务数限制
 	if len(s.runningTasks) >= s.maxConcurrentTasks {
 		return fmt.Errorf("已达到最大并发任务数限制 (%d)，请等待其他任务完成", s.maxConcurrentTasks)
 	}
-	
+
 	// 获取任务信息
 	tasks, err := s.store.GetMigrationTasks()
 	if err != nil {
 		return err
 	}
-	
+
 	var task *models.MigrationTask
 	for i, t := range tasks {
 		if t.ID == taskID {
@@ -82,36 +82,36 @@ func (s *MigrationService) StartTask(taskID string) error {
 			break
 		}
 	}
-	
+
 	if task == nil {
 		return fmt.Errorf("任务不存在")
 	}
-	
+
 	// 创建停止通道
 	stopChan := make(chan bool, 1)
 	s.runningTasks[taskID] = stopChan
-	
+
 	// 启动任务
 	go s.executeTask(task, stopChan)
-	
+
 	return nil
 }
 
 func (s *MigrationService) StopTask(taskID string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	stopChan, exists := s.runningTasks[taskID]
 	if !exists {
 		return fmt.Errorf("任务未在运行")
 	}
-	
+
 	// 发送停止信号
 	select {
 	case stopChan <- true:
 	default:
 	}
-	
+
 	delete(s.runningTasks, taskID)
 	return nil
 }
@@ -122,7 +122,7 @@ func (s *MigrationService) PauseTask(taskID string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	var task *models.MigrationTask
 	for i, t := range tasks {
 		if t.ID == taskID {
@@ -130,11 +130,11 @@ func (s *MigrationService) PauseTask(taskID string) error {
 			break
 		}
 	}
-	
+
 	if task == nil {
 		return fmt.Errorf("任务不存在")
 	}
-	
+
 	// 更新任务状态为暂停
 	task.Status = "paused"
 	return s.store.SaveMigrationTask(*task)
@@ -154,7 +154,7 @@ func (s *MigrationService) ExecuteMigration(taskID string, config models.Migrati
 		log.Printf("获取任务失败: %v", err)
 		return
 	}
-	
+
 	var task *models.MigrationTask
 	for i, t := range tasks {
 		if t.ID == taskID {
@@ -162,7 +162,7 @@ func (s *MigrationService) ExecuteMigration(taskID string, config models.Migrati
 			break
 		}
 	}
-	
+
 	if task == nil {
 		log.Printf("任务不存在: %s", taskID)
 		return
@@ -201,13 +201,11 @@ func (s *MigrationService) ExecuteMigration(taskID string, config models.Migrati
 			targetDS = &dataSources[i]
 		}
 	}
-	
 
-	
 	if sourceDS == nil {
 		log.Printf("未找到源数据库，ID: %s", task.SourceDatabase)
 	}
-	
+
 	if targetDS == nil {
 		log.Printf("未找到目标数据库，ID: %s", task.TargetDatabase)
 	}
@@ -230,7 +228,7 @@ func (s *MigrationService) ExecuteMigration(taskID string, config models.Migrati
 		}
 
 		log.Printf("迁移表 %s (%d/%d)", tableConfig.Name, i+1, totalTables)
-		
+
 		// 更新当前处理的表
 		task.CurrentTable = tableConfig.Name
 		s.store.SaveMigrationTask(*task)
@@ -422,7 +420,7 @@ func (s *MigrationService) getMaskingRulesFromConfig(ruleMap map[string]interfac
 	}
 
 	result := make(map[string]map[string]interface{})
-	
+
 	for field, ruleConfig := range ruleMap {
 		if configMap, ok := ruleConfig.(map[string]interface{}); ok {
 			// 检查是否有ruleId（使用预定义规则）
@@ -445,7 +443,7 @@ func (s *MigrationService) getMaskingRulesFromConfig(ruleMap map[string]interfac
 					if typeStr, hasType := configMap["type"].(string); hasType {
 						ruleType = typeStr
 					}
-					
+
 					result[field] = map[string]interface{}{
 						"type":    ruleType,
 						"pattern": pattern,
@@ -618,13 +616,13 @@ func (s *MigrationService) insertBatchSimple(db *sql.DB, tableName string, sourc
 		for i, colIndex := range validColumnIndexes {
 			validRow[i] = row[colIndex]
 		}
-		
+
 		result, err := stmt.Exec(validRow...)
 		if err != nil {
 			log.Printf("插入数据失败: %v", err)
 			continue
 		}
-		
+
 		// 检查是否实际插入了数据
 		if rowsAffected, err := result.RowsAffected(); err == nil {
 			if rowsAffected > 0 {
@@ -648,7 +646,7 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 		delete(s.runningTasks, task.ID)
 		s.mutex.Unlock()
 	}()
-	
+
 	// 更新任务状态为运行中，重置所有计数器
 	task.Status = "running"
 	task.Progress = 0
@@ -658,17 +656,17 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 	task.ErrorMessage = ""
 	task.StartAt = time.Now()
 	s.store.SaveMigrationTask(*task)
-	
+
 	log.Printf("开始执行迁移任务: %s", task.Name)
-	
+
 	// 直接使用任务中的表配置
 	selectedTables := task.Tables
-	
+
 	if len(selectedTables) == 0 {
 		s.finishTaskWithError(task, fmt.Errorf("没有找到要迁移的表"))
 		return
 	}
-	
+
 	// 获取数据源信息
 	dataSources, err := s.store.GetDataSources()
 	if err != nil {
@@ -685,13 +683,11 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 			targetDS = &dataSources[i]
 		}
 	}
-	
 
-	
 	if sourceDS == nil {
 		log.Printf("未找到源数据库，ID: %s", task.SourceDatabase)
 	}
-	
+
 	if targetDS == nil {
 		log.Printf("未找到目标数据库，ID: %s", task.TargetDatabase)
 	}
@@ -700,7 +696,7 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 		s.finishTaskWithError(task, fmt.Errorf("数据源不存在"))
 		return
 	}
-	
+
 	// 计算总记录数
 	log.Printf("开始计算总记录数...")
 	task.TotalRecords = 0
@@ -710,7 +706,7 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 		return
 	}
 	defer sourceDB.Close()
-	
+
 	for _, tableConfig := range selectedTables {
 		// 构建查询条件
 		whereClause, err := s.buildWhereClauseFromConfig(tableConfig)
@@ -718,51 +714,51 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 			log.Printf("构建查询条件失败，跳过表 %s: %v", tableConfig.Name, err)
 			continue
 		}
-		
+
 		// 计算记录数
 		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableConfig.Name)
 		if whereClause != "" {
 			countQuery += " WHERE " + whereClause
 		}
-		
+
 		var count int64
 		if err := sourceDB.QueryRow(countQuery).Scan(&count); err != nil {
 			log.Printf("计算表 %s 记录数失败: %v", tableConfig.Name, err)
 			continue
 		}
-		
+
 		task.TotalRecords += count
 		log.Printf("表 %s 预计迁移 %d 条记录", tableConfig.Name, count)
 	}
-	
+
 	log.Printf("总计预计迁移 %d 条记录", task.TotalRecords)
 	s.store.SaveMigrationTask(*task)
-	
+
 	// 并发执行表迁移
 	if err := s.executeTablesConcurrently(task, selectedTables, *sourceDS, *targetDS, stopChan); err != nil {
 		log.Printf("并发迁移失败: %v", err)
 		// 继续执行，不中断任务
 	}
-	
+
 	// 完成任务
 	task.Status = "completed"
 	task.Progress = 100
 	now := time.Now()
 	task.EndAt = &now
 	s.store.SaveMigrationTask(*task)
-	
+
 	log.Printf("迁移任务完成: %s", task.Name)
 }
 
 func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigration models.TableMigration) error {
 	startTime := time.Now()
-	
+
 	// 获取数据源信息
 	dataSources, err := s.store.GetDataSources()
 	if err != nil {
 		return err
 	}
-	
+
 	var sourceDS, targetDS *models.DataSource
 	for _, ds := range dataSources {
 		if ds.ID == tableMigration.SourceDS {
@@ -772,67 +768,67 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 			targetDS = &ds
 		}
 	}
-	
+
 	if sourceDS == nil || targetDS == nil {
 		return fmt.Errorf("数据源不存在")
 	}
-	
+
 	// 连接数据库
 	sourceDB, err := s.dbService.GetConnection(*sourceDS)
 	if err != nil {
 		return fmt.Errorf("连接源数据库失败: %v", err)
 	}
 	defer sourceDB.Close()
-	
+
 	targetDB, err := s.dbService.GetConnection(*targetDS)
 	if err != nil {
 		return fmt.Errorf("连接目标数据库失败: %v", err)
 	}
 	defer targetDB.Close()
-	
+
 	// 构建查询条件
 	whereClause, err := s.buildWhereClause(tableMigration)
 	if err != nil {
 		return fmt.Errorf("构建查询条件失败: %v", err)
 	}
-	
+
 	// 获取源表字段
 	sourceColumns, err := s.dbService.GetColumns(*sourceDS, tableMigration.SourceTable)
 	if err != nil {
 		return fmt.Errorf("获取源表字段失败: %v", err)
 	}
-	
+
 	// 构建查询SQL
 	selectFields := make([]string, 0, len(sourceColumns))
 	for _, col := range sourceColumns {
 		selectFields = append(selectFields, col.Name)
 	}
-	
+
 	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selectFields, ", "), tableMigration.SourceTable)
 	if whereClause != "" {
 		query += " WHERE " + whereClause
 	}
-	
+
 	// 执行查询
 	rows, err := sourceDB.Query(query)
 	if err != nil {
 		return fmt.Errorf("查询源数据失败: %v", err)
 	}
 	defer rows.Close()
-	
+
 	// 获取脱敏规则
 	maskingRules, err := s.getMaskingRules(tableMigration.MaskingRules)
 	if err != nil {
 		return fmt.Errorf("获取脱敏规则失败: %v", err)
 	}
-	
+
 	// 批量插入数据
 	recordCount := int64(0)
 	batchSize := tableMigration.BatchSize
 	if batchSize <= 0 {
 		batchSize = s.config.DefaultBatchSize
 	}
-	
+
 	var batch [][]interface{}
 	for rows.Next() {
 		// 创建扫描目标
@@ -841,20 +837,20 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 		for i := range values {
 			valuePtrs[i] = &values[i]
 		}
-		
+
 		if err := rows.Scan(valuePtrs...); err != nil {
 			return fmt.Errorf("扫描数据失败: %v", err)
 		}
-		
+
 		// 应用脱敏规则
 		for i, col := range sourceColumns {
 			if rule, exists := maskingRules[col.Name]; exists {
 				values[i] = s.applyMasking(values[i], rule)
 			}
 		}
-		
+
 		batch = append(batch, values)
-		
+
 		// 批量插入
 		if len(batch) >= batchSize {
 			if err := s.insertBatch(targetDB, tableMigration.TargetTable, sourceColumns, tableMigration.FieldMappings, batch); err != nil {
@@ -864,7 +860,7 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 			batch = batch[:0] // 清空批次
 		}
 	}
-	
+
 	// 插入剩余数据
 	if len(batch) > 0 {
 		if err := s.insertBatch(targetDB, tableMigration.TargetTable, sourceColumns, tableMigration.FieldMappings, batch); err != nil {
@@ -872,7 +868,7 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 		}
 		recordCount += int64(len(batch))
 	}
-	
+
 	// 记录迁移结果
 	duration := time.Since(startTime).Milliseconds()
 	record := models.MigrationRecord{
@@ -884,28 +880,28 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 		Duration: duration,
 		CreateAt: time.Now(),
 	}
-	
+
 	s.store.SaveMigrationRecord(record)
-	
+
 	return nil
 }
 
 func (s *MigrationService) buildWhereClause(tableMigration models.TableMigration) (string, error) {
 	var conditions []string
-	
+
 	// 添加表级条件
 	for _, condition := range tableMigration.Conditions {
 		condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
 		conditions = append(conditions, condStr)
 	}
-	
+
 	// 添加模板条件
 	if len(tableMigration.TemplateRefs) > 0 {
 		templates, err := s.store.GetFilterTemplates()
 		if err != nil {
 			return "", err
 		}
-		
+
 		for _, templateID := range tableMigration.TemplateRefs {
 			for _, template := range templates {
 				if template.ID == templateID {
@@ -918,11 +914,11 @@ func (s *MigrationService) buildWhereClause(tableMigration models.TableMigration
 			}
 		}
 	}
-	
+
 	if len(conditions) == 0 {
 		return "", nil
 	}
-	
+
 	return strings.Join(conditions, " AND "), nil
 }
 
@@ -930,12 +926,12 @@ func (s *MigrationService) getMaskingRules(ruleMap map[string]string) (map[strin
 	if len(ruleMap) == 0 {
 		return make(map[string]models.MaskingRule), nil
 	}
-	
+
 	allRules, err := s.store.GetMaskingRules()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result := make(map[string]models.MaskingRule)
 	for field, ruleID := range ruleMap {
 		for _, rule := range allRules {
@@ -945,7 +941,7 @@ func (s *MigrationService) getMaskingRules(ruleMap map[string]string) (map[strin
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -953,12 +949,12 @@ func (s *MigrationService) applyMasking(value interface{}, rule models.MaskingRu
 	if value == nil {
 		return value
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return value
 	}
-	
+
 	switch rule.Type {
 	case "phone":
 		return s.maskPhone(str)
@@ -985,12 +981,12 @@ func (s *MigrationService) maskEmail(email string) string {
 	if len(parts) != 2 {
 		return email
 	}
-	
+
 	username := parts[0]
 	if len(username) <= 2 {
 		return email
 	}
-	
+
 	masked := username[:1] + "***" + username[len(username)-1:] + "@" + parts[1]
 	return masked
 }
@@ -1006,7 +1002,7 @@ func (s *MigrationService) maskName(name string) string {
 	if len(name) == 0 {
 		return name
 	}
-	
+
 	// 对于中文姓名，保留首尾字符，中间用*替换
 	runes := []rune(name)
 	if len(runes) <= 1 {
@@ -1029,19 +1025,19 @@ func (s *MigrationService) maskCustom(value, pattern, replace string) string {
 		// 如果没有正则表达式，使用智能脱敏
 		return s.smartMask(value)
 	}
-	
+
 	// 尝试使用配置的正则表达式
 	result := s.tryRegexMask(value, pattern, replace)
 	if result != value {
 		return result
 	}
-	
+
 	// 如果配置的正则表达式不匹配，尝试通用正则表达式模板
 	result = s.tryUniversalRegexMask(value, replace)
 	if result != value {
 		return result
 	}
-	
+
 	// 最后使用智能脱敏作为后备方案
 	return s.smartMask(value)
 }
@@ -1053,11 +1049,11 @@ func (s *MigrationService) tryRegexMask(value, pattern, replace string) string {
 		log.Printf("正则表达式编译失败: %s, 错误: %v", pattern, err)
 		return value
 	}
-	
+
 	if re.MatchString(value) {
 		return re.ReplaceAllString(value, replace)
 	}
-	
+
 	return value
 }
 
@@ -1077,18 +1073,18 @@ func (s *MigrationService) tryUniversalRegexMask(value, replace string) string {
 		// 2个字符：保留第一个
 		{"^(.)(.{1})$", "$1*"},
 	}
-	
+
 	// 如果没有指定替换模式，使用默认的
 	if replace == "" {
 		replace = "$1***$3"
 	}
-	
+
 	for _, p := range patterns {
 		re, err := regexp.Compile(p.regex)
 		if err != nil {
 			continue
 		}
-		
+
 		if re.MatchString(value) {
 			// 使用模式自带的替换规则，或者用户指定的替换规则
 			replacePattern := p.replace
@@ -1099,7 +1095,7 @@ func (s *MigrationService) tryUniversalRegexMask(value, replace string) string {
 			return re.ReplaceAllString(value, replacePattern)
 		}
 	}
-	
+
 	return value
 }
 
@@ -1129,11 +1125,11 @@ func (s *MigrationService) smartMask(value string) string {
 	if len(value) == 0 {
 		return value
 	}
-	
+
 	// 转换为rune数组以正确处理中文字符
 	runes := []rune(value)
 	length := len(runes)
-	
+
 	// 根据字符串类型和长度选择不同的脱敏策略
 	switch {
 	case length == 1:
@@ -1142,15 +1138,15 @@ func (s *MigrationService) smartMask(value string) string {
 			return "*"
 		}
 		return value
-		
+
 	case length == 2:
 		// 两个字符：保留第一个，第二个用*替换
 		return string(runes[0]) + "*"
-		
+
 	case length == 3:
 		// 三个字符：保留首尾，中间用*替换
 		return string(runes[0]) + "*" + string(runes[2])
-		
+
 	case length >= 4 && length <= 6:
 		// 4-6个字符：保留首尾，中间用适量*替换
 		maskCount := length - 2
@@ -1158,15 +1154,15 @@ func (s *MigrationService) smartMask(value string) string {
 			maskCount = 4 // 最多4个*
 		}
 		return string(runes[0]) + strings.Repeat("*", maskCount) + string(runes[length-1])
-		
+
 	case length >= 7 && length <= 10:
 		// 7-10个字符：保留前2个和后1个，中间用***替换
 		return string(runes[0]) + string(runes[1]) + "***" + string(runes[length-1])
-		
+
 	case length >= 11 && length <= 15:
 		// 11-15个字符：保留前2个和后2个，中间用****替换
 		return string(runes[0]) + string(runes[1]) + "****" + string(runes[length-2]) + string(runes[length-1])
-		
+
 	default:
 		// 超过15个字符：保留前3个和后2个，中间用*****替换
 		return string(runes[0]) + string(runes[1]) + string(runes[2]) + "*****" + string(runes[length-2]) + string(runes[length-1])
@@ -1179,7 +1175,7 @@ func (s *MigrationService) isSensitiveChar(r rune) bool {
 	if (r >= 0x4e00 && r <= 0x9fff) || // 中文字符
 		(r >= 'a' && r <= 'z') || // 小写字母
 		(r >= 'A' && r <= 'Z') || // 大写字母
-		(r >= '0' && r <= '9') {  // 数字
+		(r >= '0' && r <= '9') { // 数字
 		return true
 	}
 	return false
@@ -1190,10 +1186,10 @@ func (s *MigrationService) maskKeepHeadTail(value string) string {
 	if len(value) == 0 {
 		return value
 	}
-	
+
 	runes := []rune(value)
 	length := len(runes)
-	
+
 	switch {
 	case length <= 2:
 		return value
@@ -1211,10 +1207,10 @@ func (s *MigrationService) maskKeepHead(value string) string {
 	if len(value) == 0 {
 		return value
 	}
-	
+
 	runes := []rune(value)
 	length := len(runes)
-	
+
 	switch {
 	case length <= 1:
 		return value
@@ -1232,10 +1228,10 @@ func (s *MigrationService) maskKeepTail(value string) string {
 	if len(value) == 0 {
 		return value
 	}
-	
+
 	runes := []rune(value)
 	length := len(runes)
-	
+
 	switch {
 	case length <= 1:
 		return value
@@ -1253,7 +1249,7 @@ func (s *MigrationService) maskBankCard(cardNo string) string {
 	if len(cardNo) < 8 {
 		return cardNo
 	}
-	
+
 	// 保留前4位和后4位
 	return cardNo[:4] + strings.Repeat("*", len(cardNo)-8) + cardNo[len(cardNo)-4:]
 }
@@ -1263,10 +1259,10 @@ func (s *MigrationService) maskAddress(address string) string {
 	if len(address) == 0 {
 		return address
 	}
-	
+
 	runes := []rune(address)
 	length := len(runes)
-	
+
 	switch {
 	case length <= 4:
 		return address
@@ -1281,13 +1277,13 @@ func (s *MigrationService) insertBatch(db *sql.DB, tableName string, sourceColum
 	if len(batch) == 0 {
 		return nil
 	}
-	
+
 	// 构建字段映射
 	fieldMap := make(map[string]string)
 	for _, mapping := range fieldMappings {
 		fieldMap[mapping.SourceField] = mapping.TargetField
 	}
-	
+
 	// 构建插入字段列表，跳过生成列
 	var targetFields []string
 	var validColumnIndexes []int
@@ -1301,25 +1297,25 @@ func (s *MigrationService) insertBatch(db *sql.DB, tableName string, sourceColum
 			validColumnIndexes = append(validColumnIndexes, i)
 		}
 	}
-	
+
 	// 构建插入SQL
 	placeholders := make([]string, len(targetFields))
 	for i := range placeholders {
 		placeholders[i] = "?"
 	}
-	
+
 	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		tableName,
 		strings.Join(targetFields, ", "),
 		strings.Join(placeholders, ", "))
-	
+
 	// 准备语句
 	stmt, err := db.Prepare(insertSQL)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	
+
 	// 批量执行
 	for _, row := range batch {
 		// 只传递非生成列的数据
@@ -1327,12 +1323,12 @@ func (s *MigrationService) insertBatch(db *sql.DB, tableName string, sourceColum
 		for i, colIndex := range validColumnIndexes {
 			validRow[i] = row[colIndex]
 		}
-		
+
 		if _, err := stmt.Exec(validRow...); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -1386,7 +1382,7 @@ func (s *MigrationService) ensureTargetTableExists(sourceDB, targetDB *sql.DB, t
 			return nil
 		default: // "use_existing"
 			log.Printf("目标表 %s 已存在，检查表结构...", tableName)
-			
+
 			// 检查表是否为空
 			isEmpty, err := s.isTableEmpty(targetDB, tableName)
 			if err != nil {
@@ -1396,7 +1392,7 @@ func (s *MigrationService) ensureTargetTableExists(sourceDB, targetDB *sql.DB, t
 			} else {
 				log.Printf("目标表 %s 包含数据，将根据重复数据处理策略处理", tableName)
 			}
-			
+
 			return nil
 		}
 	}
@@ -1431,7 +1427,7 @@ func (s *MigrationService) isTableEmpty(db *sql.DB, tableName string) (bool, err
 
 // tableExists 检查表是否存在
 func (s *MigrationService) tableExists(db *sql.DB, tableName, dbType string) (bool, error) {
-	
+
 	var query string
 	var args []interface{}
 
@@ -1471,7 +1467,7 @@ func (s *MigrationService) getCreateTableSQL(sourceDB *sql.DB, tableName, source
 func (s *MigrationService) getMySQLCreateTableSQL(sourceDB *sql.DB, tableName, targetType string) (string, error) {
 	query := "SHOW CREATE TABLE " + tableName
 	var table, createSQL string
-	
+
 	err := sourceDB.QueryRow(query).Scan(&table, &createSQL)
 	if err != nil {
 		return "", err
@@ -1499,7 +1495,7 @@ func (s *MigrationService) getPostgreSQLCreateTableSQL(sourceDB *sql.DB, tableNa
 		WHERE table_name = $1 
 		ORDER BY ordinal_position
 	`
-	
+
 	rows, err := sourceDB.Query(query, tableName)
 	if err != nil {
 		return "", err
@@ -1510,21 +1506,21 @@ func (s *MigrationService) getPostgreSQLCreateTableSQL(sourceDB *sql.DB, tableNa
 	for rows.Next() {
 		var columnName, dataType, isNullable string
 		var columnDefault sql.NullString
-		
+
 		if err := rows.Scan(&columnName, &dataType, &isNullable, &columnDefault); err != nil {
 			return "", err
 		}
 
 		columnDef := fmt.Sprintf("%s %s", columnName, dataType)
-		
+
 		if isNullable == "NO" {
 			columnDef += " NOT NULL"
 		}
-		
+
 		if columnDefault.Valid {
 			columnDef += " DEFAULT " + columnDefault.String
 		}
-		
+
 		columns = append(columns, columnDef)
 	}
 
@@ -1533,7 +1529,7 @@ func (s *MigrationService) getPostgreSQLCreateTableSQL(sourceDB *sql.DB, tableNa
 	}
 
 	createSQL := fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", tableName, strings.Join(columns, ",\n  "))
-	
+
 	// 如果目标是MySQL，需要转换语法
 	if targetType == "mysql" {
 		return s.convertPostgreSQLToMySQL(createSQL), nil
@@ -1546,22 +1542,22 @@ func (s *MigrationService) getPostgreSQLCreateTableSQL(sourceDB *sql.DB, tableNa
 func (s *MigrationService) convertMySQLToPostgreSQL(mysqlSQL string) string {
 	// 简化的转换逻辑，实际项目中需要更完善的转换
 	pgSQL := mysqlSQL
-	
+
 	// 移除MySQL特有的语法
 	pgSQL = regexp.MustCompile(`ENGINE=\w+`).ReplaceAllString(pgSQL, "")
 	pgSQL = regexp.MustCompile(`DEFAULT CHARSET=\w+`).ReplaceAllString(pgSQL, "")
 	pgSQL = regexp.MustCompile(`AUTO_INCREMENT=\d+`).ReplaceAllString(pgSQL, "")
 	pgSQL = regexp.MustCompile(`AUTO_INCREMENT`).ReplaceAllString(pgSQL, "SERIAL")
-	
+
 	// 数据类型转换
 	pgSQL = strings.ReplaceAll(pgSQL, "int(11)", "INTEGER")
 	pgSQL = strings.ReplaceAll(pgSQL, "varchar(", "VARCHAR(")
 	pgSQL = strings.ReplaceAll(pgSQL, "datetime", "TIMESTAMP")
 	pgSQL = strings.ReplaceAll(pgSQL, "tinyint(1)", "BOOLEAN")
-	
+
 	// 移除反引号
 	pgSQL = strings.ReplaceAll(pgSQL, "`", "")
-	
+
 	return pgSQL
 }
 
@@ -1569,15 +1565,15 @@ func (s *MigrationService) convertMySQLToPostgreSQL(mysqlSQL string) string {
 func (s *MigrationService) convertPostgreSQLToMySQL(pgSQL string) string {
 	// 简化的转换逻辑
 	mysqlSQL := pgSQL
-	
+
 	// 数据类型转换
 	mysqlSQL = strings.ReplaceAll(mysqlSQL, "SERIAL", "INT AUTO_INCREMENT")
 	mysqlSQL = strings.ReplaceAll(mysqlSQL, "BOOLEAN", "TINYINT(1)")
 	mysqlSQL = strings.ReplaceAll(mysqlSQL, "TIMESTAMP", "DATETIME")
-	
+
 	// 添加MySQL引擎
 	mysqlSQL += " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-	
+
 	return mysqlSQL
 }
 
@@ -1604,7 +1600,7 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 	}
 
 	var insertSQL string
-	
+
 	// 根据策略构建不同的SQL语句
 	switch strategy {
 	case "ignore":
@@ -1634,7 +1630,7 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 				validUpdateFields = append(validUpdateFields, field)
 			}
 		}
-		
+
 		insertSQL = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
 			tableName,
 			strings.Join(fields, ", "),
@@ -1673,7 +1669,7 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 		for i, colIndex := range validColumnIndexes {
 			validRow[i] = row[colIndex]
 		}
-		
+
 		result, err := stmt.Exec(validRow...)
 		if err != nil {
 			errorCount++
@@ -1683,7 +1679,7 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 			log.Printf("插入数据失败: %v", err)
 			continue
 		}
-		
+
 		// 检查执行结果
 		if rowsAffected, err := result.RowsAffected(); err == nil {
 			if rowsAffected > 0 {
@@ -1705,10 +1701,10 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 
 	// 记录执行结果
 	if strategy == "update" && updateCount > 0 {
-		log.Printf("表 %s: 新增 %d 条，更新 %d 条，跳过 %d 条，错误 %d 条", 
+		log.Printf("表 %s: 新增 %d 条，更新 %d 条，跳过 %d 条，错误 %d 条",
 			tableName, successCount, updateCount, skipCount, errorCount)
 	} else if skipCount > 0 || errorCount > 0 {
-		log.Printf("表 %s: 成功 %d 条，跳过 %d 条，错误 %d 条", 
+		log.Printf("表 %s: 成功 %d 条，跳过 %d 条，错误 %d 条",
 			tableName, successCount, skipCount, errorCount)
 	} else {
 		log.Printf("表 %s: 成功插入 %d 条记录", tableName, successCount)
@@ -1736,7 +1732,7 @@ func (s *MigrationService) executeTablesConcurrently(task *models.MigrationTask,
 		wg.Add(1)
 		go func(index int, config models.MigrationTableConfig) {
 			defer wg.Done()
-			
+
 			// 获取信号量
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
@@ -1894,28 +1890,28 @@ func (s *MigrationService) migrateTableConcurrently(task *models.MigrationTask, 
 // processBatchesConcurrentlyWithMasking 并发处理数据批次（包含脱敏）
 func (s *MigrationService) processBatchesConcurrentlyWithMasking(task *models.MigrationTask, targetDB *sql.DB, tableName string, sourceColumns []ColumnInfo, rows *sql.Rows, strategy string, maskingRules map[string]map[string]interface{}) error {
 	batchSize := s.config.DefaultBatchSize
-	
+
 	// 创建批次通道
 	batchChan := make(chan [][]interface{}, s.maxConcurrentBatch*2) // 缓冲通道
 	resultChan := make(chan BatchResult, s.maxConcurrentBatch*2)
-	
+
 	var wg sync.WaitGroup
-	
+
 	// 启动批次处理协程
 	for i := 0; i < s.maxConcurrentBatch; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			
+
 			for batch := range batchChan {
 				if len(batch) == 0 {
 					continue
 				}
-				
+
 				log.Printf("Worker %d 处理批次，记录数: %d", workerID, len(batch))
-				
+
 				err := s.insertBatchWithStrategy(targetDB, tableName, sourceColumns, batch, strategy)
-				
+
 				if err != nil {
 					log.Printf("Worker %d 批次处理失败: %v", workerID, err)
 					resultChan <- BatchResult{
@@ -1932,19 +1928,19 @@ func (s *MigrationService) processBatchesConcurrentlyWithMasking(task *models.Mi
 			}
 		}(i)
 	}
-	
+
 	// 启动结果收集协程
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
-	
+
 	// 读取数据并分批发送（包含脱敏处理）
 	go func() {
 		defer close(batchChan)
-		
+
 		batch := make([][]interface{}, 0, batchSize)
-		
+
 		for rows.Next() {
 			// 创建接收数据的切片
 			values := make([]interface{}, len(sourceColumns))
@@ -1952,40 +1948,40 @@ func (s *MigrationService) processBatchesConcurrentlyWithMasking(task *models.Mi
 			for i := range values {
 				valuePtrs[i] = &values[i]
 			}
-			
+
 			// 扫描数据
 			if err := rows.Scan(valuePtrs...); err != nil {
 				log.Printf("扫描数据失败: %v", err)
 				continue
 			}
-			
+
 			// 应用脱敏规则
 			for i, col := range sourceColumns {
 				if rule, exists := maskingRules[col.Name]; exists {
 					values[i] = s.applyMaskingFromConfig(values[i], rule)
 				}
 			}
-			
+
 			batch = append(batch, values)
-			
+
 			// 当批次满了或者是最后一批时，发送批次
 			if len(batch) >= batchSize {
 				batchChan <- batch
 				batch = make([][]interface{}, 0, batchSize)
 			}
 		}
-		
+
 		// 发送最后一批
 		if len(batch) > 0 {
 			batchChan <- batch
 		}
 	}()
-	
+
 	// 收集结果
 	totalRecords := 0
 	successRecords := 0
 	errorRecords := 0
-	
+
 	for result := range resultChan {
 		totalRecords += result.RecordCount
 		if result.Success {
@@ -1993,45 +1989,45 @@ func (s *MigrationService) processBatchesConcurrentlyWithMasking(task *models.Mi
 		} else {
 			errorRecords += result.RecordCount
 		}
-		
+
 		// 使用锁保护任务状态更新
 		s.mutex.Lock()
 		task.ProcessedRecords += int64(result.RecordCount)
 		s.store.SaveMigrationTask(*task)
 		s.mutex.Unlock()
 	}
-	
+
 	log.Printf("表 %s: 成功 %d 条，错误 %d 条", tableName, successRecords, errorRecords)
 	log.Printf("表 %s 迁移完成，共处理 %d 条记录", tableName, totalRecords)
-	
+
 	return nil
 }
 
 // processBatchesConcurrently 并发处理数据批次（不含脱敏，保留兼容性）
 func (s *MigrationService) processBatchesConcurrently(task *models.MigrationTask, targetDB *sql.DB, tableName string, sourceColumns []ColumnInfo, rows *sql.Rows, strategy string) error {
 	batchSize := s.config.DefaultBatchSize
-	
+
 	// 创建批次通道
 	batchChan := make(chan [][]interface{}, s.maxConcurrentBatch*2) // 缓冲通道
 	resultChan := make(chan BatchResult, s.maxConcurrentBatch*2)
-	
+
 	var wg sync.WaitGroup
-	
+
 	// 启动批次处理协程
 	for i := 0; i < s.maxConcurrentBatch; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			
+
 			for batch := range batchChan {
 				if len(batch) == 0 {
 					continue
 				}
-				
+
 				log.Printf("Worker %d 处理批次，记录数: %d", workerID, len(batch))
-				
+
 				err := s.insertBatchWithStrategy(targetDB, tableName, sourceColumns, batch, strategy)
-				
+
 				if err != nil {
 					log.Printf("Worker %d 批次处理失败: %v", workerID, err)
 					resultChan <- BatchResult{
@@ -2048,19 +2044,19 @@ func (s *MigrationService) processBatchesConcurrently(task *models.MigrationTask
 			}
 		}(i)
 	}
-	
+
 	// 启动结果收集协程
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
-	
+
 	// 读取数据并分批发送
 	go func() {
 		defer close(batchChan)
-		
+
 		batch := make([][]interface{}, 0, batchSize)
-		
+
 		for rows.Next() {
 			// 创建接收数据的切片
 			values := make([]interface{}, len(sourceColumns))
@@ -2068,33 +2064,33 @@ func (s *MigrationService) processBatchesConcurrently(task *models.MigrationTask
 			for i := range values {
 				valuePtrs[i] = &values[i]
 			}
-			
+
 			// 扫描数据
 			if err := rows.Scan(valuePtrs...); err != nil {
 				log.Printf("扫描数据失败: %v", err)
 				continue
 			}
-			
+
 			batch = append(batch, values)
-			
+
 			// 当批次满了或者是最后一批时，发送批次
 			if len(batch) >= batchSize {
 				batchChan <- batch
 				batch = make([][]interface{}, 0, batchSize)
 			}
 		}
-		
+
 		// 发送最后一批
 		if len(batch) > 0 {
 			batchChan <- batch
 		}
 	}()
-	
+
 	// 收集结果
 	totalRecords := 0
 	successRecords := 0
 	errorRecords := 0
-	
+
 	for result := range resultChan {
 		totalRecords += result.RecordCount
 		if result.Success {
@@ -2102,17 +2098,17 @@ func (s *MigrationService) processBatchesConcurrently(task *models.MigrationTask
 		} else {
 			errorRecords += result.RecordCount
 		}
-		
+
 		// 使用锁保护任务状态更新
 		s.mutex.Lock()
 		task.ProcessedRecords += int64(result.RecordCount)
 		s.store.SaveMigrationTask(*task)
 		s.mutex.Unlock()
 	}
-	
+
 	log.Printf("表 %s: 成功 %d 条，错误 %d 条", tableName, successRecords, errorRecords)
 	log.Printf("表 %s 迁移完成，共处理 %d 条记录", tableName, totalRecords)
-	
+
 	return nil
 }
 
@@ -2128,7 +2124,7 @@ func (s *MigrationService) SetConcurrencyLimits(maxTasks, maxTables, maxBatch in
 func (s *MigrationService) GetConcurrencyStats() map[string]interface{} {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	return map[string]interface{}{
 		"running_tasks":         len(s.runningTasks),
 		"max_concurrent_tasks":  s.maxConcurrentTasks,
@@ -2136,6 +2132,3 @@ func (s *MigrationService) GetConcurrencyStats() map[string]interface{} {
 		"max_concurrent_batch":  s.maxConcurrentBatch,
 	}
 }
-
-
-

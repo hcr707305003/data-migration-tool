@@ -22,26 +22,26 @@ func New(logDir string) (*Logger, error) {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, fmt.Errorf("创建日志目录失败: %v", err)
 	}
-	
+
 	// 生成日志文件名（按日期）
 	now := time.Now()
 	logFileName := fmt.Sprintf("app-%s.log", now.Format("2006-01-02"))
 	logFilePath := filepath.Join(logDir, logFileName)
-	
+
 	// 打开或创建日志文件
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("创建日志文件失败: %v", err)
 	}
-	
+
 	// 创建多重写入器（同时写入控制台和文件）
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 	errorWriter := io.MultiWriter(os.Stderr, logFile)
-	
+
 	// 创建日志记录器
 	infoLogger := log.New(multiWriter, "", log.LstdFlags)
 	errorLogger := log.New(errorWriter, "ERROR: ", log.LstdFlags|log.Lshortfile)
-	
+
 	return &Logger{
 		infoLogger:  infoLogger,
 		errorLogger: errorLogger,
@@ -79,10 +79,10 @@ func SetupGlobalLogger(logDir string) (*Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 设置标准库的log输出到我们的日志文件
 	log.SetOutput(io.MultiWriter(os.Stdout, logger.logFile))
 	log.SetFlags(log.LstdFlags)
-	
+
 	return logger, nil
 }

@@ -20,13 +20,13 @@ func NewJSONStorage(dataDir string) *JSONStorage {
 	storage := &JSONStorage{
 		dataDir: dataDir,
 	}
-	
+
 	// 自动初始化数据目录和文件
 	if err := storage.Initialize(); err != nil {
 		// 记录错误但不中断程序
 		log.Printf("警告: 初始化数据目录失败: %v", err)
 	}
-	
+
 	return storage
 }
 
@@ -36,14 +36,14 @@ func (s *JSONStorage) Initialize() error {
 	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
 		return err
 	}
-	
+
 	log.Printf("数据目录已初始化: %s", s.dataDir)
-	
+
 	// 初始化所有必要的JSON文件
 	if err := s.initializeDataFiles(); err != nil {
 		return err
 	}
-	
+
 	log.Printf("数据文件初始化完成")
 	return nil
 }
@@ -60,10 +60,10 @@ func (s *JSONStorage) initializeDataFiles() error {
 		"migration_tasks":   []models.MigrationTask{},
 		"migration_records": []models.MigrationRecord{},
 	}
-	
+
 	for filename, defaultData := range files {
 		filePath := s.getFilePath(filename)
-		
+
 		// 检查文件是否存在
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			// 文件不存在，创建默认文件
@@ -73,7 +73,7 @@ func (s *JSONStorage) initializeDataFiles() error {
 			log.Printf("已创建默认文件: %s", filename+".json")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -610,7 +610,7 @@ func (s *JSONStorage) getFilePath(filename string) string {
 func (s *JSONStorage) loadData(filename string, data interface{}) error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	filePath := s.getFilePath(filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		// 文件不存在时，初始化为空数组
@@ -632,12 +632,12 @@ func (s *JSONStorage) loadData(filename string, data interface{}) error {
 		}
 		return nil
 	}
-	
+
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	
+
 	if len(content) == 0 {
 		// 文件为空时，也初始化为空数组
 		switch v := data.(type) {
@@ -658,19 +658,19 @@ func (s *JSONStorage) loadData(filename string, data interface{}) error {
 		}
 		return nil
 	}
-	
+
 	return json.Unmarshal(content, data)
 }
 
 func (s *JSONStorage) saveData(filename string, data interface{}) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	content, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	filePath := s.getFilePath(filename)
 	return ioutil.WriteFile(filePath, content, 0644)
 }
@@ -687,7 +687,7 @@ func (s *JSONStorage) SaveDataSource(ds models.DataSource) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 更新或添加
 	found := false
 	for i, existing := range dataSources {
@@ -697,11 +697,11 @@ func (s *JSONStorage) SaveDataSource(ds models.DataSource) error {
 			break
 		}
 	}
-	
+
 	if !found {
 		dataSources = append(dataSources, ds)
 	}
-	
+
 	return s.saveData("datasources", dataSources)
 }
 
@@ -710,14 +710,14 @@ func (s *JSONStorage) DeleteDataSource(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for i, ds := range dataSources {
 		if ds.ID == id {
 			dataSources = append(dataSources[:i], dataSources[i+1:]...)
 			break
 		}
 	}
-	
+
 	return s.saveData("datasources", dataSources)
 }
 
@@ -733,7 +733,7 @@ func (s *JSONStorage) SaveFilterTemplate(template models.FilterTemplate) error {
 	if err != nil {
 		return err
 	}
-	
+
 	found := false
 	for i, existing := range templates {
 		if existing.ID == template.ID {
@@ -742,11 +742,11 @@ func (s *JSONStorage) SaveFilterTemplate(template models.FilterTemplate) error {
 			break
 		}
 	}
-	
+
 	if !found {
 		templates = append(templates, template)
 	}
-	
+
 	return s.saveData("filter_templates", templates)
 }
 
@@ -755,14 +755,14 @@ func (s *JSONStorage) DeleteFilterTemplate(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for i, template := range templates {
 		if template.ID == id {
 			templates = append(templates[:i], templates[i+1:]...)
 			break
 		}
 	}
-	
+
 	return s.saveData("filter_templates", templates)
 }
 
@@ -778,7 +778,7 @@ func (s *JSONStorage) SaveMaskingRule(rule models.MaskingRule) error {
 	if err != nil {
 		return err
 	}
-	
+
 	found := false
 	for i, existing := range rules {
 		if existing.ID == rule.ID {
@@ -787,11 +787,11 @@ func (s *JSONStorage) SaveMaskingRule(rule models.MaskingRule) error {
 			break
 		}
 	}
-	
+
 	if !found {
 		rules = append(rules, rule)
 	}
-	
+
 	return s.saveData("masking_rules", rules)
 }
 
@@ -800,14 +800,14 @@ func (s *JSONStorage) DeleteMaskingRule(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for i, rule := range rules {
 		if rule.ID == id {
 			rules = append(rules[:i], rules[i+1:]...)
 			break
 		}
 	}
-	
+
 	return s.saveData("masking_rules", rules)
 }
 
@@ -823,7 +823,7 @@ func (s *JSONStorage) SaveTableMigration(migration models.TableMigration) error 
 	if err != nil {
 		return err
 	}
-	
+
 	found := false
 	for i, existing := range migrations {
 		if existing.ID == migration.ID {
@@ -832,11 +832,11 @@ func (s *JSONStorage) SaveTableMigration(migration models.TableMigration) error 
 			break
 		}
 	}
-	
+
 	if !found {
 		migrations = append(migrations, migration)
 	}
-	
+
 	return s.saveData("table_migrations", migrations)
 }
 
@@ -845,14 +845,14 @@ func (s *JSONStorage) DeleteTableMigration(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for i, migration := range migrations {
 		if migration.ID == id {
 			migrations = append(migrations[:i], migrations[i+1:]...)
 			break
 		}
 	}
-	
+
 	return s.saveData("table_migrations", migrations)
 }
 
@@ -860,14 +860,14 @@ func (s *JSONStorage) DeleteTableMigration(id string) error {
 func (s *JSONStorage) GetMigrationTasks() ([]models.MigrationTask, error) {
 	var tasks []models.MigrationTask
 	err := s.loadData("migration_tasks", &tasks)
-	
+
 	// 如果解析失败（可能是格式不兼容），返回空数组并清空文件
 	if err != nil {
 		// 清空不兼容的数据
 		s.saveData("migration_tasks", []models.MigrationTask{})
 		return []models.MigrationTask{}, nil
 	}
-	
+
 	return tasks, nil
 }
 
@@ -876,7 +876,7 @@ func (s *JSONStorage) SaveMigrationTask(task models.MigrationTask) error {
 	if err != nil {
 		return err
 	}
-	
+
 	found := false
 	for i, existing := range tasks {
 		if existing.ID == task.ID {
@@ -885,11 +885,11 @@ func (s *JSONStorage) SaveMigrationTask(task models.MigrationTask) error {
 			break
 		}
 	}
-	
+
 	if !found {
 		tasks = append(tasks, task)
 	}
-	
+
 	return s.saveData("migration_tasks", tasks)
 }
 
@@ -898,14 +898,14 @@ func (s *JSONStorage) DeleteMigrationTask(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for i, task := range tasks {
 		if task.ID == id {
 			tasks = append(tasks[:i], tasks[i+1:]...)
 			break
 		}
 	}
-	
+
 	return s.saveData("migration_tasks", tasks)
 }
 
@@ -921,7 +921,7 @@ func (s *JSONStorage) SaveMigrationRecord(record models.MigrationRecord) error {
 	if err != nil {
 		return err
 	}
-	
+
 	records = append(records, record)
 	return s.saveData("migration_records", records)
 }
@@ -931,14 +931,14 @@ func (s *JSONStorage) GetMigrationRecordsByTaskID(taskID string) ([]models.Migra
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var taskRecords []models.MigrationRecord
 	for _, record := range records {
 		if record.TaskID == taskID {
 			taskRecords = append(taskRecords, record)
 		}
 	}
-	
+
 	return taskRecords, nil
 }
 
@@ -954,7 +954,7 @@ func (s *JSONStorage) SaveMaskingType(maskingType models.MaskingType) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 查找是否存在相同ID的类型
 	found := false
 	for i, t := range types {
@@ -964,12 +964,12 @@ func (s *JSONStorage) SaveMaskingType(maskingType models.MaskingType) error {
 			break
 		}
 	}
-	
+
 	// 如果不存在，添加新类型
 	if !found {
 		types = append(types, maskingType)
 	}
-	
+
 	return s.saveData("masking_types", types)
 }
 
@@ -978,7 +978,7 @@ func (s *JSONStorage) DeleteMaskingType(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 过滤掉要删除的类型
 	var filteredTypes []models.MaskingType
 	for _, t := range types {
@@ -986,6 +986,6 @@ func (s *JSONStorage) DeleteMaskingType(id string) error {
 			filteredTypes = append(filteredTypes, t)
 		}
 	}
-	
+
 	return s.saveData("masking_types", filteredTypes)
 }
