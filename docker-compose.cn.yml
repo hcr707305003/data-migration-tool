@@ -22,9 +22,9 @@ services:
       - QUERY_TIMEOUT=300
       - STATUS_CHECK_INTERVAL=300
       - TZ=Asia/Shanghai
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+    # volumes:
+    #   - ./data:/app/data
+    #   - ./logs:/app/logs
     restart: unless-stopped
 
 networks:
