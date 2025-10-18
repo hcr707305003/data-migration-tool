@@ -11,6 +11,12 @@ on:
 env:
   GO_VERSION: "1.22"
 
+# 设置权限以允许写入releases
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   test:
     name: Test
@@ -159,5 +165,6 @@ jobs:
           files: |
             build/*.tar.gz
             build/*.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
