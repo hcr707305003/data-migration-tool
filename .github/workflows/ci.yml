@@ -67,13 +67,16 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-${{ github.run_id }}
           restore-keys: |
+            ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-
             ${{ runner.os }}-go-${{ env.GO_VERSION }}-
             ${{ runner.os }}-go-
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Clean Go cache
+        run: |
+          go clean -cache -modcache -testcache
+          go mod download
 
       - name: Verify dependencies
         run: go mod verify
@@ -95,10 +98,15 @@ jobs:
           find . -name "*.test" -delete 2>/dev/null || true
           find . -name "coverage.out" -delete 2>/dev/null || true
           
-          # 运行测试
-          go test -v -race -coverprofile=coverage.out ./...
+          # 设置Go测试环境变量以减少并发冲突
+          export GOCACHE=$(go env GOCACHE)
+          export GOMODCACHE=$(go env GOMODCACHE)
+          
+          # 运行测试，减少并发度以避免文件冲突
+          go test -v -race -coverprofile=coverage.out -p=1 ./...
         env:
           CGO_ENABLED: 1
+          GOMAXPROCS: 2
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
