@@ -103,7 +103,8 @@ start.bat
 
 ```bash
 # 使用Docker Compose（推荐）
-docker-compose up -d
+docker compose up -d
+# 或使用旧版本命令: docker-compose up -d
 
 # 或者直接使用Docker
 docker build -t data-migration-tool .
@@ -115,7 +116,7 @@ docker run -d \
   data-migration-tool
 
 # 启动应用
-docker-compose up -d
+docker compose up -d
 ```
 
 **方式三：直接运行**
@@ -256,28 +257,19 @@ chmod +x prepare-docker.sh
 ./prepare-docker.sh
 
 # 启动应用（国际版）
-docker-compose up -d
+docker compose up -d
 
 # 启动应用（中国优化版）
-docker-compose -f docker-compose.cn.yml up -d
+docker compose -f docker-compose.cn.yml up -d
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 停止应用
-docker-compose down
+docker compose down
 ```
 
-**WSL 环境部署（推荐）**
 
-```bash
-# WSL环境下配置网络
-chmod +x setup-wsl-network.sh
-./setup-wsl-network.sh
-
-# 使用WSL优化配置启动
-docker-compose -f docker-compose.wsl.yml up -d
-```
 
 **Windows 直接部署**
 
@@ -286,7 +278,7 @@ REM 创建目录
 mkdir data logs
 
 REM 启动应用
-docker-compose -f docker-compose.cn.yml up -d
+docker compose -f docker-compose.cn.yml up -d
 ```
 
 **使用 Docker**
@@ -360,9 +352,9 @@ volumes:
 ./docker-start.sh build
 
 # 手动命令
-docker-compose ps
-docker-compose logs -f data-migration-tool
-docker-compose exec data-migration-tool sh
+docker compose ps
+docker compose logs -f data-migration-tool
+docker compose exec data-migration-tool sh
 ```
 
 ### 🛠️ 常见问题解决
@@ -370,15 +362,11 @@ docker-compose exec data-migration-tool sh
 **权限问题：**
 容器启动时会自动检测和处理权限问题，无需手动干预。
 
-**WSL 网络问题：**
+**网络访问问题：**
 
 ```bash
-# 问题1: 容器无法访问宿主机MySQL/PostgreSQL
-# 解决方案: 使用WSL网络配置
-./setup-wsl-network.sh
-docker-compose -f docker-compose.wsl.yml up -d
-
-# 问题2: 手动配置宿主机访问
+# 问题: 容器无法访问宿主机MySQL/PostgreSQL
+# 解决方案: 手动配置宿主机访问
 # 在数据源配置中使用: host.docker.internal
 # MySQL: host.docker.internal:3306
 # PostgreSQL: host.docker.internal:5432
@@ -399,7 +387,7 @@ sudo setsebool -P container_manage_cgroup on
 sudo chcon -Rt svirt_sandbox_file_t data logs
 
 # 问题6: 查看容器启动日志
-docker-compose logs data-migration-tool
+docker compose logs data-migration-tool
 ```
 
 ### 🛡️ 生产环境建议

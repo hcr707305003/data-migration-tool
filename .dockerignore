@@ -51,10 +51,13 @@ Dockerfile*
 docker-compose*
 .dockerignore
 
-# 脚本文件
-*.sh
+# 脚本文件（排除Docker需要的脚本）
+# *.sh
 *.bat
 *.ps1
+prepare-docker.sh
+docker-start.sh
+release.sh
 
 # 其他
 LICENSE

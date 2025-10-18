@@ -16,31 +16,47 @@ set GID=1001
 
 echo 🐳 使用用户ID: %UID%, 组ID: %GID%
 
+REM 检测Docker Compose命令
+set DOCKER_COMPOSE_CMD=
+docker compose version >nul 2>&1
+if %errorlevel% equ 0 (
+    set DOCKER_COMPOSE_CMD=docker compose
+) else (
+    docker-compose --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set DOCKER_COMPOSE_CMD=docker-compose
+    ) else (
+        echo ❌ Docker Compose未安装，请先安装Docker Compose
+        pause
+        exit /b 1
+    )
+)
+
 REM 根据参数执行不同操作
 set ACTION=%1
 if "%ACTION%"=="" set ACTION=up
 
 if "%ACTION%"=="up" (
     echo 🚀 启动Docker容器...
-    docker-compose up -d
+    %DOCKER_COMPOSE_CMD% up -d
 ) else if "%ACTION%"=="up-cn" (
     echo 🚀 启动Docker容器 ^(中国优化版^)...
-    docker-compose -f docker-compose.cn.yml up -d
+    %DOCKER_COMPOSE_CMD% -f docker-compose.cn.yml up -d
 ) else if "%ACTION%"=="down" (
     echo 🛑 停止Docker容器...
-    docker-compose down
+    %DOCKER_COMPOSE_CMD% down
 ) else if "%ACTION%"=="logs" (
     echo 📋 查看日志...
-    docker-compose logs -f
+    %DOCKER_COMPOSE_CMD% logs -f
 ) else if "%ACTION%"=="ps" (
     echo 📊 查看容器状态...
-    docker-compose ps
+    %DOCKER_COMPOSE_CMD% ps
 ) else if "%ACTION%"=="restart" (
     echo 🔄 重启容器...
-    docker-compose restart
+    %DOCKER_COMPOSE_CMD% restart
 ) else if "%ACTION%"=="build" (
     echo 🔨 重新构建镜像...
-    docker-compose build --no-cache
+    %DOCKER_COMPOSE_CMD% build --no-cache
 ) else (
     echo 使用方法: %0 [up^|up-cn^|down^|logs^|ps^|restart^|build]
     echo.

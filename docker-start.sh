@@ -23,35 +23,46 @@ fi
 
 echo "🐳 使用用户ID: $UID, 组ID: $GID"
 
+# 检测Docker Compose命令
+DOCKER_COMPOSE_CMD=""
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    echo "❌ Docker Compose未安装，请先安装Docker Compose"
+    exit 1
+fi
+
 # 根据参数执行不同操作
 case "${1:-up}" in
     "up")
         echo "🚀 启动Docker容器..."
-        docker-compose up -d
+        $DOCKER_COMPOSE_CMD up -d
         ;;
     "up-cn")
         echo "🚀 启动Docker容器 (中国优化版)..."
-        docker-compose -f docker-compose.cn.yml up -d
+        $DOCKER_COMPOSE_CMD -f docker-compose.cn.yml up -d
         ;;
     "down")
         echo "🛑 停止Docker容器..."
-        docker-compose down
+        $DOCKER_COMPOSE_CMD down
         ;;
     "logs")
         echo "📋 查看日志..."
-        docker-compose logs -f
+        $DOCKER_COMPOSE_CMD logs -f
         ;;
     "ps")
         echo "📊 查看容器状态..."
-        docker-compose ps
+        $DOCKER_COMPOSE_CMD ps
         ;;
     "restart")
         echo "🔄 重启容器..."
-        docker-compose restart
+        $DOCKER_COMPOSE_CMD restart
         ;;
     "build")
         echo "🔨 重新构建镜像..."
-        docker-compose build --no-cache
+        $DOCKER_COMPOSE_CMD build --no-cache
         ;;
     *)
         echo "使用方法: $0 [up|up-cn|down|logs|ps|restart|build]"

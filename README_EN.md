@@ -132,7 +132,8 @@ start.bat
 **Option 2: Docker Deployment (Recommended for Production)**
 ```bash
 # Using Docker Compose (Recommended)
-docker-compose up -d
+docker compose up -d
+# Or use legacy command: docker-compose up -d
 
 # Or using Docker directly
 docker build -t data-migration-tool .
@@ -144,7 +145,7 @@ docker run -d \
   data-migration-tool
 
 # Start application
-docker-compose up -d
+docker compose up -d
 ```
 
 **Option 3: Direct Run**
@@ -249,28 +250,19 @@ chmod +x prepare-docker.sh
 ./prepare-docker.sh
 
 # Start application (International version)
-docker-compose up -d
+docker compose up -d
 
 # Start application (China optimized version)
-docker-compose -f docker-compose.cn.yml up -d
+docker compose -f docker-compose.cn.yml up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop application
-docker-compose down
+docker compose down
 ```
 
-**WSL Environment Deployment (Recommended)**
 
-```bash
-# Configure network for WSL environment
-chmod +x setup-wsl-network.sh
-./setup-wsl-network.sh
-
-# Start with WSL optimized configuration
-docker-compose -f docker-compose.wsl.yml up -d
-```
 
 **Windows Direct Deployment**
 
@@ -279,7 +271,7 @@ REM Create directories
 mkdir data logs
 
 REM Start application
-docker-compose -f docker-compose.cn.yml up -d
+docker compose -f docker-compose.cn.yml up -d
 ```
 
 **Using Docker**
@@ -355,9 +347,9 @@ volumes:
 ./docker-start.sh build
 
 # Manual commands
-docker-compose ps
-docker-compose logs -f data-migration-tool
-docker-compose exec data-migration-tool sh
+docker compose ps
+docker compose logs -f data-migration-tool
+docker compose exec data-migration-tool sh
 ```
 
 ### 🛠️ Common Issues Resolution
@@ -365,15 +357,11 @@ docker-compose exec data-migration-tool sh
 **Permission Issues:**
 The container automatically detects and handles permission issues on startup.
 
-**WSL Network Issues:**
+**Network Access Issues:**
 
 ```bash
-# Issue 1: Container cannot access host MySQL/PostgreSQL
-# Solution: Use WSL network configuration
-./setup-wsl-network.sh
-docker-compose -f docker-compose.wsl.yml up -d
-
-# Issue 2: Manual host access configuration
+# Issue: Container cannot access host MySQL/PostgreSQL
+# Solution: Manual host access configuration
 # Use in data source config: host.docker.internal
 # MySQL: host.docker.internal:3306
 # PostgreSQL: host.docker.internal:5432
@@ -394,7 +382,7 @@ sudo setsebool -P container_manage_cgroup on
 sudo chcon -Rt svirt_sandbox_file_t data logs
 
 # Issue 6: Check container startup logs
-docker-compose logs data-migration-tool
+docker compose logs data-migration-tool
 ```
 
 ### 🛡️ Production Environment Recommendations

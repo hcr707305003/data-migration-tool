@@ -31,15 +31,23 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# 检查docker-compose是否可用
-if ! command -v docker-compose >/dev/null 2>&1; then
-    echo "❌ docker-compose未安装，请先安装docker-compose"
+# 检查docker compose是否可用
+DOCKER_COMPOSE_CMD=""
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+    echo "✅ 检测到 Docker Compose V2 (docker compose)"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+    echo "✅ 检测到 Docker Compose V1 (docker-compose)"
+else
+    echo "❌ Docker Compose未安装，请先安装Docker Compose"
+    echo "   安装方法: https://docs.docker.com/compose/install/"
     exit 1
 fi
 
 echo "✅ Docker环境准备完成"
 echo ""
 echo "🚀 现在可以运行以下命令启动服务:"
-echo "   docker-compose up -d                    # 国际版"
-echo "   docker-compose -f docker-compose.cn.yml up -d  # 中国优化版"
+echo "   $DOCKER_COMPOSE_CMD up -d                    # 国际版"
+echo "   $DOCKER_COMPOSE_CMD -f docker-compose.cn.yml up -d  # 中国优化版"
 echo ""

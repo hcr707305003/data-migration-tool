@@ -27,7 +27,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-      - ./.env:/app/.env:ro
     restart: unless-stopped
 
 networks:

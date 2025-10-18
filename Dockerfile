@@ -35,7 +35,7 @@ FROM alpine:latest
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # 安装必要的包
-RUN apk --no-cache add ca-certificates tzdata wget
+RUN apk --no-cache add ca-certificates tzdata wget su-exec
 
 # 设置时区
 ENV TZ=Asia/Shanghai
@@ -53,8 +53,8 @@ COPY --from=builder /app/data-migration-tool .
 # 复制Web资源
 COPY --from=builder /app/web ./web
 
-# 复制启动脚本
-COPY docker-entrypoint.sh /usr/local/bin/
+# 复制启动脚本（直接从构建上下文复制）
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # 创建数据和日志目录，设置权限
@@ -62,8 +62,8 @@ RUN mkdir -p data logs && \
     chmod 755 data logs && \
     chown -R appuser:appgroup /app
 
-# 切换到非root用户
-USER appuser
+# 保持root用户，在entrypoint中切换
+# USER appuser
 
 # 暴露端口
 EXPOSE 8080
