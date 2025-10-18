@@ -244,10 +244,14 @@ The system supports three-level concurrency control, configurable via the "Concu
 **Using Docker Compose (Recommended)**
 
 ```bash
-# Start application (International users)
+# Prepare environment (first run)
+chmod +x prepare-docker.sh
+./prepare-docker.sh
+
+# Start application (International version)
 docker-compose up -d
 
-# Start application (China users, with optimized mirrors)
+# Start application (China optimized version)
 docker-compose -f docker-compose.cn.yml up -d
 
 # View logs
@@ -255,6 +259,16 @@ docker-compose logs -f
 
 # Stop application
 docker-compose down
+```
+
+**One-Click Start (Windows)**
+
+```cmd
+REM Create directories
+mkdir data logs
+
+REM Start application
+docker-compose -f docker-compose.cn.yml up -d
 ```
 
 **Using Docker**
@@ -318,19 +332,44 @@ volumes:
 
 ```bash
 # Check running status
-docker-compose ps
+./docker-start.sh ps
 
 # View real-time logs
-docker-compose logs -f data-migration-tool
-
-# Enter container
-docker-compose exec data-migration-tool sh
+./docker-start.sh logs
 
 # Restart service
-docker-compose restart data-migration-tool
+./docker-start.sh restart
 
-# Update image
-docker-compose pull && docker-compose up -d
+# Rebuild image
+./docker-start.sh build
+
+# Manual commands
+docker-compose ps
+docker-compose logs -f data-migration-tool
+docker-compose exec data-migration-tool sh
+```
+
+### 🛠️ Permission Issues Resolution
+
+**Automatic Permission Handling:**
+The container automatically detects and handles permission issues on startup.
+
+**Manual Permission Resolution:**
+
+```bash
+# Issue 1: Data directory permission issues
+# Solution: Run preparation script
+./prepare-docker.sh
+
+# Issue 2: Manually set directory permissions
+chmod 755 data logs
+
+# Issue 3: SELinux permission issues (CentOS/RHEL)
+sudo setsebool -P container_manage_cgroup on
+sudo chcon -Rt svirt_sandbox_file_t data logs
+
+# Issue 4: Check container startup logs
+docker-compose logs data-migration-tool
 ```
 
 ### 🛡️ Production Environment Recommendations

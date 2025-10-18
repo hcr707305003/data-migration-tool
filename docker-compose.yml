@@ -6,6 +6,8 @@ services:
     container_name: data-migration-tool
     ports:
       - "8080:8080"
+    # 使用init进程处理信号
+    init: true
     environment:
       - PORT=8080
       - DATA_DIR=/app/data

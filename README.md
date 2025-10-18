@@ -251,10 +251,14 @@ data-migration-tool.exe
 **使用 Docker Compose（推荐）**
 
 ```bash
-# 启动应用（国外用户）
+# 准备环境（首次运行）
+chmod +x prepare-docker.sh
+./prepare-docker.sh
+
+# 启动应用（国际版）
 docker-compose up -d
 
-# 启动应用（国内用户，使用优化的镜像源）
+# 启动应用（中国优化版）
 docker-compose -f docker-compose.cn.yml up -d
 
 # 查看日志
@@ -262,6 +266,16 @@ docker-compose logs -f
 
 # 停止应用
 docker-compose down
+```
+
+**一键启动（Windows）**
+
+```cmd
+REM 创建目录
+mkdir data logs
+
+REM 启动应用
+docker-compose -f docker-compose.cn.yml up -d
 ```
 
 **使用 Docker**
@@ -325,19 +339,44 @@ volumes:
 
 ```bash
 # 查看运行状态
-docker-compose ps
+./docker-start.sh ps
 
 # 查看实时日志
-docker-compose logs -f data-migration-tool
-
-# 进入容器
-docker-compose exec data-migration-tool sh
+./docker-start.sh logs
 
 # 重启服务
-docker-compose restart data-migration-tool
+./docker-start.sh restart
 
-# 更新镜像
-docker-compose pull && docker-compose up -d
+# 重新构建镜像
+./docker-start.sh build
+
+# 手动命令
+docker-compose ps
+docker-compose logs -f data-migration-tool
+docker-compose exec data-migration-tool sh
+```
+
+### 🛠️ 权限问题解决
+
+**自动权限处理：**
+容器启动时会自动检测和处理权限问题，无需手动干预。
+
+**手动解决权限问题：**
+
+```bash
+# 问题1: 数据目录权限不足
+# 解决方案: 运行准备脚本
+./prepare-docker.sh
+
+# 问题2: 手动设置目录权限
+chmod 755 data logs
+
+# 问题3: SELinux权限问题（CentOS/RHEL）
+sudo setsebool -P container_manage_cgroup on
+sudo chcon -Rt svirt_sandbox_file_t data logs
+
+# 问题4: 查看容器启动日志
+docker-compose logs data-migration-tool
 ```
 
 ### 🛡️ 生产环境建议
