@@ -53,6 +53,9 @@ COPY --from=builder /app/data-migration-tool .
 # 复制Web资源
 COPY --from=builder /app/web ./web
 
+# 复制环境配置文件
+COPY .env.example .env
+
 # 复制启动脚本（直接从构建上下文复制）
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
