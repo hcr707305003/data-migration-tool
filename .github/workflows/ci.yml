@@ -2,20 +2,20 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   release:
-    types: [ published ]
+    types: [published]
 
 env:
-  GO_VERSION: '1.22'
+  GO_VERSION: "1.22"
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -31,7 +31,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-      
+
       postgres:
         image: postgres:15
         env:
@@ -47,119 +47,318 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-    - name: Download dependencies
-      run: go mod download
+      - name: Download dependencies
+        run: go mod download
 
-    - name: Verify dependencies
-      run: go mod verify
+      - name: Verify dependencies
+        run: go mod verify
 
-    - name: Run go vet
-      run: go vet ./...
+      - name: Run go vet
+        run: go vet ./...
 
-    - name: Run go fmt
-      run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "Code is not formatted properly:"
-          gofmt -s -l .
-          exit 1
-        fi
+      - name: Run go fmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted properly:"
+            gofmt -s -l .
+            exit 1
+          fi
 
-    - name: Run tests
-      run: go test -v -race -coverprofile=coverage.out ./...
-      env:
-        CGO_ENABLED: 1
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+        env:
+          CGO_ENABLED: 1
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.out
-        flags: unittests
-        name: codecov-umbrella
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
-    - name: Build for Linux
-      run: |
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o build/data-migration-tool-linux-amd64 .
-        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o build/data-migration-tool-linux-arm64 .
+      - name: Create build directories
+        run: |
+          mkdir -p build/packages
+          mkdir -p build/binaries
 
-    - name: Build for Windows
-      run: |
-        CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o build/data-migration-tool-windows-amd64.exe .
+      - name: Build for Linux
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o build/binaries/data-migration-tool-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o build/binaries/data-migration-tool-linux-arm64 .
 
-    - name: Build for macOS
-      run: |
-        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o build/data-migration-tool-darwin-amd64 .
-        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -o build/data-migration-tool-darwin-arm64 .
+      - name: Build for Windows
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o build/binaries/data-migration-tool-windows-amd64.exe .
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: binaries
-        path: build/
+      - name: Build for macOS
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o build/binaries/data-migration-tool-darwin-amd64 .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -o build/binaries/data-migration-tool-darwin-arm64 .
 
+      - name: Create startup scripts
+        run: |
+          # Linux/macOS 启动脚本
+          cat > build/start.sh << 'EOF'
+          #!/bin/bash
+          
+          # Data Migration Tool 启动脚本
+          
+          set -e
+          
+          # 获取脚本所在目录
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          cd "$SCRIPT_DIR"
+          
+          # 检测系统架构
+          ARCH=$(uname -m)
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          
+          case "$OS" in
+              linux*)
+                  case "$ARCH" in
+                      x86_64|amd64) BINARY="./data-migration-tool-linux-amd64" ;;
+                      aarch64|arm64) BINARY="./data-migration-tool-linux-arm64" ;;
+                      *) echo "不支持的架构: $ARCH"; exit 1 ;;
+                  esac
+                  ;;
+              darwin*)
+                  case "$ARCH" in
+                      x86_64|amd64) BINARY="./data-migration-tool-darwin-amd64" ;;
+                      arm64) BINARY="./data-migration-tool-darwin-arm64" ;;
+                      *) echo "不支持的架构: $ARCH"; exit 1 ;;
+                  esac
+                  ;;
+              *) echo "不支持的操作系统: $OS"; exit 1 ;;
+          esac
+          
+          # 检查二进制文件是否存在
+          if [ ! -f "$BINARY" ]; then
+              echo "错误: 找不到二进制文件 $BINARY"
+              echo "请确保下载了正确的发布包"
+              exit 1
+          fi
+          
+          # 设置执行权限
+          chmod +x "$BINARY"
+          
+          # 创建必要的目录
+          mkdir -p data logs
+          
+          # 启动程序
+          echo "启动 Data Migration Tool..."
+          echo "访问地址: http://localhost:8080"
+          echo "按 Ctrl+C 停止程序"
+          echo ""
+          
+          exec "$BINARY"
+          EOF
+          
+          # Windows 启动脚本
+          cat > build/start.bat << 'EOF'
+          @echo off
+          chcp 65001 >nul
+          
+          REM Data Migration Tool 启动脚本
+          
+          setlocal enabledelayedexpansion
+          
+          REM 获取脚本所在目录
+          set "SCRIPT_DIR=%~dp0"
+          cd /d "%SCRIPT_DIR%"
+          
+          REM 检测系统架构
+          set "BINARY=data-migration-tool-windows-amd64.exe"
+          
+          REM 检查二进制文件是否存在
+          if not exist "%BINARY%" (
+              echo 错误: 找不到二进制文件 %BINARY%
+              echo 请确保下载了正确的发布包
+              pause
+              exit /b 1
+          )
+          
+          REM 创建必要的目录
+          if not exist "data" mkdir data
+          if not exist "logs" mkdir logs
+          
+          REM 启动程序
+          echo 启动 Data Migration Tool...
+          echo 访问地址: http://localhost:8080
+          echo 按 Ctrl+C 停止程序
+          echo.
+          
+          "%BINARY%"
+          
+          if errorlevel 1 (
+              echo.
+              echo 程序异常退出
+              pause
+          )
+          EOF
 
+      - name: Create configuration files
+        run: |
+          # 创建示例配置文件
+          cat > build/.env.example << 'EOF'
+          # Data Migration Tool 配置文件
+          
+          # Web服务配置
+          PORT=8080
+          
+          # 数据目录
+          DATA_DIR=./data
+          LOG_DIR=./logs
+          
+          # 并发配置
+          MAX_CONCURRENT_TASKS=3
+          MAX_CONCURRENT_TABLES=2
+          MAX_CONCURRENT_BATCH=4
+          
+          # 性能配置
+          DEFAULT_BATCH_SIZE=1000
+          CONNECTION_TIMEOUT=30
+          QUERY_TIMEOUT=300
+          
+          # 状态检查间隔（秒）
+          STATUS_CHECK_INTERVAL=5
+          EOF
+          
+          # 创建README
+          cat > build/README.txt << 'EOF'
+          Data Migration Tool v1.0.0
+          ==========================
+          
+          快速开始:
+          --------
+          
+          Linux/macOS:
+          1. 解压文件到目标目录
+          2. 运行: ./start.sh
+          3. 打开浏览器访问: http://localhost:8080
+          
+          Windows:
+          1. 解压文件到目标目录  
+          2. 双击运行: start.bat
+          3. 打开浏览器访问: http://localhost:8080
+          
+          配置:
+          ----
+          1. 复制 .env.example 为 .env
+          2. 根据需要修改配置参数
+          3. 重启程序使配置生效
+          
+          目录结构:
+          --------
+          data/           - 数据存储目录
+          logs/           - 日志文件目录
+          web/            - Web静态资源
+          .env.example    - 配置文件示例
+          README.txt      - 说明文档
+          start.sh        - Linux/macOS启动脚本
+          start.bat       - Windows启动脚本
+          
+          更多信息请访问: https://github.com/hcr707305003/data-migration-tool
+          EOF
+
+      - name: Create release packages
+        run: |
+          # 复制Web资源
+          cp -r web build/
+          
+          # 为每个平台创建完整包
+          platforms=("linux-amd64" "linux-arm64" "windows-amd64" "darwin-amd64" "darwin-arm64")
+          
+          for platform in "${platforms[@]}"; do
+              pkg_dir="build/packages/data-migration-tool-$platform"
+              mkdir -p "$pkg_dir"
+              
+              # 复制通用文件
+              cp build/.env.example "$pkg_dir/"
+              cp build/README.txt "$pkg_dir/"
+              cp -r build/web "$pkg_dir/"
+              cp LICENSE "$pkg_dir/" 2>/dev/null || true
+              cp README.md "$pkg_dir/" 2>/dev/null || true
+              
+              # 复制对应的二进制文件
+              if [[ "$platform" == *"windows"* ]]; then
+                  cp "build/binaries/data-migration-tool-$platform.exe" "$pkg_dir/"
+                  cp build/start.bat "$pkg_dir/"
+              else
+                  cp "build/binaries/data-migration-tool-$platform" "$pkg_dir/"
+                  cp build/start.sh "$pkg_dir/"
+                  chmod +x "$pkg_dir/start.sh"
+                  chmod +x "$pkg_dir/data-migration-tool-$platform"
+              fi
+              
+              # 创建压缩包
+              cd build/packages
+              if [[ "$platform" == *"windows"* ]]; then
+                  zip -r "data-migration-tool-$platform.zip" "data-migration-tool-$platform/"
+              else
+                  tar -czf "data-migration-tool-$platform.tar.gz" "data-migration-tool-$platform/"
+              fi
+              cd ../..
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: build/packages/
 
   release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.event_name == 'release'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: binaries
-        path: build/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: packages/
 
-    - name: Create release archives
-      run: |
-        cd build
-        tar -czf data-migration-tool-linux-amd64.tar.gz data-migration-tool-linux-amd64
-        tar -czf data-migration-tool-linux-arm64.tar.gz data-migration-tool-linux-arm64
-        zip data-migration-tool-windows-amd64.zip data-migration-tool-windows-amd64.exe
-        tar -czf data-migration-tool-darwin-amd64.tar.gz data-migration-tool-darwin-amd64
-        tar -czf data-migration-tool-darwin-arm64.tar.gz data-migration-tool-darwin-arm64
-
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          build/*.tar.gz
-          build/*.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packages/*.tar.gz
+            packages/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
