@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.cn
     container_name: data-migration-tool
     ports:
-      - "8080:8080"
+      - "8780:8080"
     # 使用init进程处理信号
     init: true
     environment:

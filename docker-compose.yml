@@ -5,7 +5,7 @@ services:
     build: .
     container_name: data-migration-tool
     ports:
-      - "8080:8080"
+      - "8780:8080"
     # 使用init进程处理信号
     init: true
     # 网络配置，允许访问宿主机服务
