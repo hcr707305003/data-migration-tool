@@ -244,7 +244,7 @@ data-migration-tool.exe
 ./data-migration-tool
 ```
 
-## � D 用 ocker 部署
+## 🐳 用 Docker 部署
 
 ### 📦 快速部署
 
