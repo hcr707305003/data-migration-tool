@@ -1,0 +1,73 @@
+# 针对中国用户优化的Dockerfile
+# 使用官方Go镜像
+FROM golang:1.22-alpine AS builder
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置Go模块代理为国内镜像
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=off
+ENV GO111MODULE=on
+
+# 设置Alpine镜像源为国内镜像（清华大学镜像）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
+# 安装必要的包
+RUN apk add --no-cache git ca-certificates tzdata
+
+# 复制go mod文件
+COPY go.mod go.sum ./
+
+# 下载依赖（利用Docker缓存层）
+RUN go mod download && go mod verify
+
+# 复制源代码
+COPY . .
+
+# 构建应用
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o data-migration-tool .
+
+# 使用官方alpine镜像作为运行环境
+FROM alpine:latest
+
+# 设置Alpine镜像源为国内镜像（清华大学镜像）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
+# 安装必要的包
+RUN apk --no-cache add ca-certificates tzdata wget
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+
+# 创建非root用户
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段复制二进制文件
+COPY --from=builder /app/data-migration-tool .
+
+# 复制Web资源
+COPY --from=builder /app/web ./web
+
+# 创建数据和日志目录
+RUN mkdir -p data logs && \
+    chown -R appuser:appgroup /app
+
+# 切换到非root用户
+USER appuser
+
+# 暴露端口
+EXPOSE 8080
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+
+# 启动应用
+CMD ["./data-migration-tool"]

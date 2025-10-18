@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  data-migration-tool:
+    build:
+      context: .
+      dockerfile: Dockerfile.cn
+    container_name: data-migration-tool
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATA_DIR=/app/data
+      - LOG_DIR=/app/logs
+      - MAX_CONCURRENT_TASKS=3
+      - MAX_CONCURRENT_TABLES=2
+      - MAX_CONCURRENT_BATCH=4
+      - DEFAULT_BATCH_SIZE=1000
+      - CONNECTION_TIMEOUT=30
+      - QUERY_TIMEOUT=300
+      - STATUS_CHECK_INTERVAL=300
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+
+networks:
+  migration-network:
+    driver: bridge

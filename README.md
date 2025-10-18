@@ -99,13 +99,32 @@ chmod +x start.sh
 start.bat
 ```
 
-**方式二：直接运行**
+**方式二：Docker 部署（推荐生产环境）**
+
+```bash
+# 使用Docker Compose（推荐）
+docker-compose up -d
+
+# 或者直接使用Docker
+docker build -t data-migration-tool .
+docker run -d \
+  --name data-migration-tool \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/logs:/app/logs \
+  data-migration-tool
+
+# 启动应用
+docker-compose up -d
+```
+
+**方式三：直接运行**
 
 ```bash
 go run main.go
 ```
 
-**方式三：自定义配置**
+**方式四：自定义配置**
 
 ```bash
 export PORT=9090
@@ -223,6 +242,127 @@ data-migration-tool.exe
 
 # Linux/macOS
 ./data-migration-tool
+```
+
+## � D 用 ocker 部署
+
+### 📦 快速部署
+
+**使用 Docker Compose（推荐）**
+
+```bash
+# 启动应用（国外用户）
+docker-compose up -d
+
+# 启动应用（国内用户，使用优化的镜像源）
+docker-compose -f docker-compose.cn.yml up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止应用
+docker-compose down
+```
+
+**使用 Docker**
+
+```bash
+# 构建镜像（国外用户）
+docker build -t data-migration-tool .
+
+# 构建镜像（国内用户，使用优化的镜像源）
+docker build -f Dockerfile.cn -t data-migration-tool .
+
+# 运行容器
+docker run -d \
+  --name data-migration-tool \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/logs:/app/logs \
+  -e PORT=8080 \
+  -e MAX_CONCURRENT_TASKS=3 \
+  data-migration-tool
+```
+
+### 🔧 Docker 配置
+
+**方法1：环境变量配置**
+
+```yaml
+# docker-compose.yml
+environment:
+  - PORT=8080
+  - DATA_DIR=/app/data
+  - LOG_DIR=/app/logs
+  - MAX_CONCURRENT_TASKS=3
+  - MAX_CONCURRENT_TABLES=2
+  - DEFAULT_BATCH_SIZE=1000
+```
+
+**方法2：使用.env文件（推荐）**
+
+```bash
+# 复制示例配置文件
+cp .env.docker .env
+
+# 编辑配置
+vim .env
+```
+
+**数据持久化**
+
+```yaml
+# docker-compose.yml
+volumes:
+  - ./data:/app/data # 数据文件
+  - ./logs:/app/logs # 日志文件
+  - ./.env:/app/.env:ro # 环境配置文件（只读）
+```
+
+
+
+### 🔍 Docker 管理命令
+
+```bash
+# 查看运行状态
+docker-compose ps
+
+# 查看实时日志
+docker-compose logs -f data-migration-tool
+
+# 进入容器
+docker-compose exec data-migration-tool sh
+
+# 重启服务
+docker-compose restart data-migration-tool
+
+# 更新镜像
+docker-compose pull && docker-compose up -d
+```
+
+### 🛡️ 生产环境建议
+
+```yaml
+# docker-compose.prod.yml
+version: "3.8"
+services:
+  data-migration-tool:
+    image: data-migration-tool:latest
+    restart: always
+    environment:
+      - PORT=8080
+      - MAX_CONCURRENT_TASKS=5
+      - DEFAULT_BATCH_SIZE=2000
+    volumes:
+      - /opt/migration/data:/app/data
+      - /opt/migration/logs:/app/logs
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
 ```
 
 ## 📖 使用指南

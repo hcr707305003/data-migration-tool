@@ -1,0 +1,60 @@
+# Git相关
+.git/
+.gitignore
+.github/
+
+# 构建产物
+build/
+dist/
+releases/
+*.exe
+data-migration-tool
+data-migration-tool-*
+
+# 日志文件
+logs/
+*.log
+
+# 数据文件
+data/
+*.json
+
+# 开发工具
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 文档
+*.md
+docs/
+
+# 测试文件
+*_test.go
+testdata/
+
+# 临时文件
+tmp/
+temp/
+
+# 环境文件
+.env
+.env.local
+.env.docker
+
+# Docker相关
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# 脚本文件
+*.sh
+*.bat
+*.ps1
+
+# 其他
+LICENSE

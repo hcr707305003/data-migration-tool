@@ -129,12 +129,30 @@ chmod +x start.sh
 start.bat
 ```
 
-**Option 2: Direct Run**
+**Option 2: Docker Deployment (Recommended for Production)**
+```bash
+# Using Docker Compose (Recommended)
+docker-compose up -d
+
+# Or using Docker directly
+docker build -t data-migration-tool .
+docker run -d \
+  --name data-migration-tool \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/logs:/app/logs \
+  data-migration-tool
+
+# Start application
+docker-compose up -d
+```
+
+**Option 3: Direct Run**
 ```bash
 go run main.go
 ```
 
-**Option 3: Custom Configuration**
+**Option 4: Custom Configuration**
 ```bash
 export PORT=9090
 export STATUS_CHECK_INTERVAL=120
@@ -218,6 +236,127 @@ The system supports three-level concurrency control, configurable via the "Concu
 - **Max Concurrent Tasks**: Number of tasks running simultaneously (default: 3)
 - **Max Concurrent Tables per Task**: Number of tables migrated simultaneously per task (default: 2)  
 - **Max Concurrent Batches per Table**: Number of batches processed simultaneously per table (default: 4)
+
+## 🐳 Docker Deployment
+
+### 📦 Quick Deployment
+
+**Using Docker Compose (Recommended)**
+
+```bash
+# Start application (International users)
+docker-compose up -d
+
+# Start application (China users, with optimized mirrors)
+docker-compose -f docker-compose.cn.yml up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop application
+docker-compose down
+```
+
+**Using Docker**
+
+```bash
+# Build image (International users)
+docker build -t data-migration-tool .
+
+# Build image (China users, with optimized mirrors)
+docker build -f Dockerfile.cn -t data-migration-tool .
+
+# Run container
+docker run -d \
+  --name data-migration-tool \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/logs:/app/logs \
+  -e PORT=8080 \
+  -e MAX_CONCURRENT_TASKS=3 \
+  data-migration-tool
+```
+
+### 🔧 Docker Configuration
+
+**Method 1: Environment Variables**
+
+```yaml
+# docker-compose.yml
+environment:
+  - PORT=8080
+  - DATA_DIR=/app/data
+  - LOG_DIR=/app/logs
+  - MAX_CONCURRENT_TASKS=3
+  - MAX_CONCURRENT_TABLES=2
+  - DEFAULT_BATCH_SIZE=1000
+```
+
+**Method 2: Using .env File (Recommended)**
+
+```bash
+# Copy example configuration file
+cp .env.docker .env
+
+# Edit configuration
+vim .env
+```
+
+**Data Persistence**
+
+```yaml
+# docker-compose.yml
+volumes:
+  - ./data:/app/data # Data files
+  - ./logs:/app/logs # Log files
+  - ./.env:/app/.env:ro # Environment configuration file (read-only)
+```
+
+
+
+### 🔍 Docker Management Commands
+
+```bash
+# Check running status
+docker-compose ps
+
+# View real-time logs
+docker-compose logs -f data-migration-tool
+
+# Enter container
+docker-compose exec data-migration-tool sh
+
+# Restart service
+docker-compose restart data-migration-tool
+
+# Update image
+docker-compose pull && docker-compose up -d
+```
+
+### 🛡️ Production Environment Recommendations
+
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  data-migration-tool:
+    image: data-migration-tool:latest
+    restart: always
+    environment:
+      - PORT=8080
+      - MAX_CONCURRENT_TASKS=5
+      - DEFAULT_BATCH_SIZE=2000
+    volumes:
+      - /opt/migration/data:/app/data
+      - /opt/migration/logs:/app/logs
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+```
 
 ## 📖 User Guide
 
