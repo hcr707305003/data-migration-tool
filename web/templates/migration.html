@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/static/css/toast.css" rel="stylesheet">
+    <link href="/static/css/main.css" rel="stylesheet">
+    <style>
+        /* 已选择表的样式 */
+        .table-selected {
+            background: rgba(25, 135, 84, 0.1) !important;
+            border-left: 4px solid #198754 !important;
+            transition: all 0.2s ease;
+        }
+        
+        .table-selected:hover {
+            background: rgba(25, 135, 84, 0.15) !important;
+            transform: translateX(2px);
+        }
+        
+        /* 表列表项的悬停效果 */
+        .list-group-item:not(.table-selected):hover {
+            background: rgba(13, 110, 253, 0.05);
+            border-left: 4px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        /* 表操作按钮区域样式 */
+        #tableOperations {
+            background: rgba(13, 202, 240, 0.05);
+            border: 1px solid rgba(13, 202, 240, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+        
+        /* 表列表容器样式 */
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+        
+        /* 已选择表的容器样式 */
+        #selectedTables {
+            min-height: 200px;
+            max-height: 350px;
+        }
+        
+        /* 已选择表项样式 */
+        .selected-table-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            background: rgba(25, 135, 84, 0.1);
+            border: 1px solid rgba(25, 135, 84, 0.2);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            word-break: break-all;
+            transition: all 0.2s ease;
+        }
+        
+        .selected-table-item:hover {
+            background: rgba(25, 135, 84, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .selected-table-name {
+            flex: 1;
+            margin-right: 8px;
+            font-weight: 500;
+            color: #198754;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .selected-table-remove {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+        
+        .selected-table-remove:hover {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+        
+        /* 自定义滚动条 */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(108, 117, 125, 0.1);
+            border-radius: 3px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #6c757d;
+            border-radius: 3px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #0d6efd;
+        }
+        
+        /* 表列表项基础样式 */
+        .list-group-item {
+            border-left: 4px solid transparent;
+            border-right: none;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .list-group-item:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .list-group-item:last-child {
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <h5 class="sidebar-heading px-3 mt-4 mb-1 tech-line">
+                        <i class="bi bi-cpu"></i> 数据迁移工具
+                    </h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/migration">
+                                <i class="bi bi-diagram-3"></i> 迁移任务配置
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/execution">
+                                <i class="bi bi-list-task"></i> 任务列表
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/datasource">
+                                <i class="bi bi-hdd-network"></i> 数据源管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/template">
+                                <i class="bi bi-filter-circle"></i> 过滤模板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/masking">
+                                <i class="bi bi-shield-check"></i> 脱敏规则
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-area">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">迁移任务配置</h1>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showMigrationTaskModal()">
+                            <i class="bi bi-plus-circle"></i> 新建任务
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showConcurrencyModal()">
+                            <i class="bi bi-speedometer2"></i> 并发设置
+                        </button>
+                    </div>
+                </div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>任务合并</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">任务名称</label>
+                    <input type="text" class="form-control" id="taskName" placeholder="输入任务名称">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">源数据库</label>
+                    <select class="form-select" id="sourceDatabase">
+                        <option value="">选择源数据库</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">目标数据库</label>
+                    <select class="form-select" id="targetDatabase">
+                        <option value="">选择目标数据库</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">迁移表 (可选择多张表进行迁移)</label>
+                    <input type="text" class="form-control" id="tableSearch" placeholder="搜索表名...">
+                    
+                    <!-- 表操作按钮 -->
+                    <div class="d-flex justify-content-between align-items-center mt-2 mb-2" id="tableOperations" style="display: none;">
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="selectAllTables()" title="选择当前显示的所有表">
+                                <i class="bi bi-check-all"></i> 全选
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllTables()" title="取消选择当前显示的所有表">
+                                <i class="bi bi-x-square"></i> 全不选
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="invertTableSelection()" title="反选当前显示的表">
+                                <i class="bi bi-arrow-repeat"></i> 反选
+                            </button>
+                        </div>
+                        <span class="text-muted small">
+                            <i class="bi bi-table me-1"></i>共 <span id="availableTableCount" class="fw-bold">0</span> 张表
+                        </span>
+                    </div>
+                    
+                    <div class="table-container">
+                        <div id="tableList" class="list-group">
+                            <!-- 表列表将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>已选择的表 <span id="selectedTableCount" class="badge bg-primary">0</span></h5>
+            </div>
+            <div class="card-body">
+                <div id="selectedTables" class="table-container">
+                    <!-- 已选择的表将在这里显示 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 配置预览面板 -->
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-eye"></i> 配置预览</h6>
+                <div class="btn-group">
+                    <button class="btn btn-outline-warning btn-sm" onclick="reloadTaskConfig()" title="重载配置 - 还原到上次保存的状态">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="refreshConfigPreview()" title="刷新预览">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-3">
+                <div id="configPreview">
+                    <div class="text-muted text-center py-3">
+                        <i class="bi bi-gear"></i>
+                        <div class="mt-2">配置任务信息后将在此显示预览</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 标签页导航 -->
+<div class="row mt-3">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="migrationTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="new-task-tab" data-bs-toggle="tab" data-bs-target="#new-task-pane" type="button" role="tab">
+                    <i class="bi bi-plus-circle"></i> <span id="taskTabTitle">新建任务</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="task-list-tab" data-bs-toggle="tab" data-bs-target="#task-list-pane" type="button" role="tab">
+                    <i class="bi bi-list-task"></i> 任务管理 <span id="taskCountBadge" class="badge bg-primary ms-1">0</span>
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="migrationTabContent">
+            <!-- 新建任务面板 -->
+            <div class="tab-pane fade show active" id="new-task-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>任务配置</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">选择过滤模板</label>
+                            <select class="form-select" id="filterTemplate">
+                                <option value="">选择过滤模板</option>
+                            </select>
+                            <button class="btn btn-outline-primary btn-sm mt-1" onclick="addFilterTemplate()">
+                                <i class="bi bi-plus"></i> 添加模板条件
+                            </button>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">脱敏规则</label>
+                            <select class="form-select" id="maskingRule">
+                                <option value="">选择脱敏规则</option>
+                            </select>
+                            <button class="btn btn-outline-primary btn-sm mt-1" onclick="addMaskingRule()">
+                                <i class="bi bi-plus"></i> 添加脱敏规则
+                            </button>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">重复数据处理策略</label>
+                            <select class="form-select" id="duplicateStrategy">
+                                <option value="ignore">跳过重复记录 (INSERT IGNORE)</option>
+                                <option value="replace">替换重复记录 (REPLACE INTO)</option>
+                                <option value="update">更新重复记录 (ON DUPLICATE KEY UPDATE)</option>
+                                <option value="error">报错停止 (默认INSERT)</option>
+                            </select>
+                            <small class="text-muted">选择遇到重复主键时的处理方式</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">表处理策略</label>
+                            <select class="form-select" id="tableStrategy">
+                                <option value="use_existing">使用现有表（如果存在）</option>
+                                <option value="recreate">重新创建表（删除现有表）</option>
+                                <option value="create_only">仅创建不存在的表</option>
+                            </select>
+                            <small class="text-muted">选择目标表已存在时的处理方式</small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button class="btn btn-outline-secondary me-2" onclick="newTask()">
+                                    <i class="bi bi-plus"></i> 新建任务
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="saveTaskAsDraft()">
+                                    <i class="bi bi-save"></i> 保存为草稿
+                                </button>
+                            </div>
+                            <button class="btn btn-success" onclick="startMigration()">
+                                <i class="bi bi-play"></i> 运行迁移
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 任务管理面板 -->
+            <div class="tab-pane fade" id="task-list-pane" role="tabpanel">
+                <!-- 搜索和筛选 -->
+                <div class="search-filters mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="input-group" style="width: 200px;">
+                            <span class="input-group-text bg-transparent border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="taskSearch" 
+                                   placeholder="搜索任务..." onkeyup="filterTasks()">
+                        </div>
+                        <select class="form-select" id="taskStatusFilter" onchange="filterTasks()" style="width: 120px;">
+                            <option value="">所有状态</option>
+                            <option value="draft">草稿</option>
+                            <option value="initializing">初始化中</option>
+                            <option value="running">运行中</option>
+                            <option value="paused">已暂停</option>
+                            <option value="completed">已完成</option>
+                            <option value="failed">失败</option>
+                            <option value="stopped">已停止</option>
+                        </select>
+                        <select class="form-select" id="taskDateFilter" onchange="filterTasks()" style="width: 100px;">
+                            <option value="">所有时间</option>
+                            <option value="today">今天</option>
+                            <option value="week">本周</option>
+                            <option value="month">本月</option>
+                        </select>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="toggleSelectAll()" title="全选/取消全选">
+                                <i class="bi bi-check-square"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="importTask()" title="导入任务配置">
+                                <i class="bi bi-upload"></i>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshTasks()" title="刷新">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务统计 -->
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="stat-card-compact">
+                        <div class="stat-number" id="totalTasks">0</div>
+                        <div class="stat-label">总任务数</div>
+                    </div>
+                    <div class="stat-card-compact">
+                        <div class="stat-number text-secondary" id="draftTasks">0</div>
+                        <div class="stat-label">草稿</div>
+                    </div>
+                    <div class="stat-card-compact">
+                        <div class="stat-number text-primary" id="runningTasks">0</div>
+                        <div class="stat-label">运行中</div>
+                    </div>
+                    <div class="stat-card-compact">
+                        <div class="stat-number text-success" id="completedTasks">0</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                    <div class="stat-card-compact">
+                        <div class="stat-number text-danger" id="failedTasks">0</div>
+                        <div class="stat-label">失败</div>
+                    </div>
+                    <div class="stat-card-compact">
+                        <div class="stat-number text-warning" id="pausedTasks">0</div>
+                        <div class="stat-label">暂停</div>
+                    </div>
+                </div>
+
+                <!-- 批量操作工具栏 -->
+                <div class="batch-operations mb-3" id="batchOperations" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center p-3" style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+                        <div>
+                            <span class="text-muted">已选择 <span id="selectedCount">0</span> 个任务</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary btn-sm" onclick="batchEdit()">
+                                <i class="bi bi-pencil"></i> 批量编辑
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="batchRun()">
+                                <i class="bi bi-play"></i> 批量运行
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="batchDelete()">
+                                <i class="bi bi-trash"></i> 批量删除
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">
+                                <i class="bi bi-x"></i> 取消选择
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务卡片列表 -->
+                <div class="row" id="migrationTasksContainer">
+                    <!-- 任务卡片将在这里动态生成 -->
+                </div>
+
+                <!-- 空状态 -->
+                <div id="emptyState" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">暂无迁移任务</h4>
+                    <p class="text-muted">还没有创建任何迁移任务，点击"新建任务"标签页创建第一个任务</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 弹框容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/migration.js"></script>
+</body>
+</html>   
+ <!-- 并发设置模态框 -->
+    <div class="modal fade" id="concurrencyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">并发设置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="concurrencyForm">
+                        <div class="mb-3">
+                            <label for="maxTasks" class="form-label">最大并发任务数</label>
+                            <input type="number" class="form-control" id="maxTasks" min="1" max="10" value="3">
+                            <div class="form-text">同时运行的最大任务数量</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxTables" class="form-label">每任务最大并发表数</label>
+                            <input type="number" class="form-control" id="maxTables" min="1" max="10" value="2">
+                            <div class="form-text">每个任务同时迁移的最大表数量</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxBatch" class="form-label">每表最大并发批次数</label>
+                            <input type="number" class="form-control" id="maxBatch" min="1" max="20" value="4">
+                            <div class="form-text">每个表同时处理的最大批次数量</div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>提示：</strong>增加并发数可以提高迁移速度，但也会增加数据库负载。请根据服务器性能合理设置。
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveConcurrencySettings()">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 并发设置相关函数
+        function showConcurrencyModal() {
+            // 加载当前设置
+            loadConcurrencySettings();
+            const modal = new bootstrap.Modal(document.getElementById('concurrencyModal'));
+            modal.show();
+        }
+
+        async function loadConcurrencySettings() {
+            try {
+                const response = await fetch('/api/migration/concurrency/stats');
+                const stats = await response.json();
+                
+                document.getElementById('maxTasks').value = stats.max_concurrent_tasks || 3;
+                document.getElementById('maxTables').value = stats.max_concurrent_tables || 2;
+                document.getElementById('maxBatch').value = stats.max_concurrent_batch || 4;
+            } catch (error) {
+                console.error('加载并发设置失败:', error);
+            }
+        }
+
+        async function saveConcurrencySettings() {
+            const maxTasks = parseInt(document.getElementById('maxTasks').value);
+            const maxTables = parseInt(document.getElementById('maxTables').value);
+            const maxBatch = parseInt(document.getElementById('maxBatch').value);
+
+            try {
+                const response = await fetch('/api/migration/concurrency', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        max_tasks: maxTasks,
+                        max_tables: maxTables,
+                        max_batch: maxBatch
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('并发设置保存成功', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('concurrencyModal'));
+                    modal.hide();
+                } else {
+                    showAlert('保存失败: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('保存并发设置失败:', error);
+                showAlert('保存失败: ' + error.message, 'danger');
+            }
+        }
+
+        // 在页面加载时显示并发统计
+        async function updateConcurrencyStats() {
+            try {
+                const response = await fetch('/api/migration/concurrency/stats');
+                const stats = await response.json();
+                
+                // 可以在界面上显示当前运行的任务数等信息
+                console.log('并发统计:', stats);
+            } catch (error) {
+                console.error('获取并发统计失败:', error);
+            }
+        }
+
+        // 定期更新统计信息
+        setInterval(updateConcurrencyStats, 5000);
+    </script>
+</body>
+</html>

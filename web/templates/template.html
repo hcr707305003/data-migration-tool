@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/static/css/toast.css" rel="stylesheet">
+    <link href="/static/css/main.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <h5 class="sidebar-heading px-3 mt-4 mb-1 tech-line">
+                        <i class="bi bi-cpu"></i> 数据迁移工具
+                    </h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/migration">
+                                <i class="bi bi-diagram-3"></i> 迁移任务配置
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/execution">
+                                <i class="bi bi-list-task"></i> 任务列表
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/datasource">
+                                <i class="bi bi-hdd-network"></i> 数据源管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/template">
+                                <i class="bi bi-filter-circle"></i> 过滤模板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/masking">
+                                <i class="bi bi-shield-check"></i> 脱敏规则
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-area">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">过滤模板</h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary" onclick="mysqlHelper.toggle()">
+                            <i class="bi bi-code-square"></i> 函数助手
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="refreshFilterTemplates()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                        <button class="btn btn-primary" onclick="showFilterTemplateModal()">
+                            <i class="bi bi-plus-circle"></i> 添加模板
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 搜索和筛选 -->
+                <div class="search-filters">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="templateSearch" 
+                                       placeholder="搜索模板名称或描述..." onkeyup="filterTemplateList()">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="templateConditionFilter" onchange="filterTemplateList()">
+                                <option value="">所有条件</option>
+                                <option value="has-conditions">有条件</option>
+                                <option value="no-conditions">无条件</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="templateStatusFilter" onchange="filterTemplateList()">
+                                <option value="">所有状态</option>
+                                <option value="enabled">已启用</option>
+                                <option value="disabled">已禁用</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 过滤模板卡片网格 -->
+                <div id="templateGrid" class="row g-4">
+                    <!-- 过滤模板卡片将在这里动态生成 -->
+                </div>
+
+                <!-- 空状态 -->
+                <div id="emptyTemplateState" class="text-center py-5" style="display: none;">
+                    <div class="empty-state">
+                        <i class="bi bi-funnel-fill display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">暂无过滤模板</h4>
+                        <p class="text-muted mb-4">创建您的第一个过滤模板来简化数据筛选</p>
+                        <button class="btn btn-primary" onclick="showFilterTemplateModal()">
+                            <i class="bi bi-plus-circle"></i> 添加模板
+                        </button>
+                    </div>
+                </div>
+
+<!-- 过滤模板管理模态框 -->
+<div class="modal fade" id="filterTemplateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title" id="filterTemplateModalTitle" style="color: var(--primary-color);">添加过滤模板</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterTemplateForm">
+                    <input type="hidden" id="filterTemplateId">
+                    <div class="mb-3">
+                        <label for="templateName" class="form-label">模板名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="templateName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="templateDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="templateDescription" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">过滤条件</label>
+                        <div id="templateConditions">
+                            <!-- 条件列表将在这里动态生成 -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addTemplateCondition()">
+                            <i class="bi bi-plus"></i> 添加条件
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveFilterTemplate()">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 弹框容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/mysql-functions.js"></script>
+    <script src="/static/js/autocomplete.js"></script>
+    <script src="/static/js/function-helper.js"></script>
+    <script src="/static/js/template.js"></script>
+    
+    <script>
+        // 初始化MySQL函数助手
+        document.addEventListener('DOMContentLoaded', function() {
+            initMySQLFunctionHelper();
+        });
+    </script>
+</body>
+</html>

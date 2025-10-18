@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/static/css/toast.css" rel="stylesheet">
+    <link href="/static/css/main.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <h5 class="sidebar-heading px-3 mt-4 mb-1 tech-line">
+                        <i class="bi bi-cpu"></i> 数据迁移工具
+                    </h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/migration">
+                                <i class="bi bi-diagram-3"></i> 迁移任务配置
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/execution">
+                                <i class="bi bi-list-task"></i> 任务列表
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/datasource">
+                                <i class="bi bi-hdd-network"></i> 数据源管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/template">
+                                <i class="bi bi-filter-circle"></i> 过滤模板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/masking">
+                                <i class="bi bi-shield-check"></i> 脱敏规则
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-area">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">数据源管理</h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" onclick="refreshDataSources()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                        <button class="btn btn-primary" onclick="showDataSourceModal()">
+                            <i class="bi bi-plus-circle"></i> 添加数据源
+                        </button>
+                    </div>
+                </div>
+
+<!-- 搜索和筛选 -->
+<div class="search-filters">
+    <div class="row">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control border-start-0" id="dataSourceSearch" 
+                   placeholder="搜索数据源名称或主机..." onkeyup="filterDataSources()">
+        </div>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="dataSourceTypeFilter" onchange="filterDataSources()">
+            <option value="">所有类型</option>
+            <option value="mysql">MySQL</option>
+            <option value="postgresql">PostgreSQL</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="dataSourceStatusFilter" onchange="filterDataSources()">
+            <option value="">连接状态</option>
+            <option value="connected">已连接</option>
+            <option value="disconnected">未连接</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="dataSourceEnabledFilter" onchange="filterDataSources()">
+            <option value="">启用状态</option>
+            <option value="enabled">已启用</option>
+            <option value="disabled">已禁用</option>
+        </select>
+    </div>
+    </div>
+</div>
+
+<!-- 数据源卡片网格 -->
+<div id="dataSourceGrid" class="row g-4">
+    <!-- 数据源卡片将在这里动态生成 -->
+</div>
+
+<!-- 空状态 -->
+<div id="emptyDataSourceState" class="text-center py-5" style="display: none;">
+    <div class="empty-state">
+        <i class="bi bi-database-x display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">暂无数据源</h4>
+        <p class="text-muted mb-4">开始添加您的第一个数据源来进行数据迁移</p>
+        <button class="btn btn-primary" onclick="showDataSourceModal()">
+            <i class="bi bi-plus-circle"></i> 添加数据源
+        </button>
+    </div>
+</div>
+
+<!-- 数据源管理模态框 -->
+<div class="modal fade" id="dataSourceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title" id="dataSourceModalTitle" style="color: var(--primary-color);">添加数据源</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <form id="dataSourceForm">
+                    <input type="hidden" id="dataSourceId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dsName" class="form-label">数据源名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="dsName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dsType" class="form-label">数据库类型 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="dsType" required onchange="setDefaultPort()">
+                                    <option value="">选择数据库类型</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="postgresql">PostgreSQL</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="dsHost" class="form-label">主机地址 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="dsHost" placeholder="localhost" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="dsPort" class="form-label">端口 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="dsPort" placeholder="3306" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dsDatabase" class="form-label">数据库名 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="dsDatabase" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dsUsername" class="form-label">用户名 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="dsUsername" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dsPassword" class="form-label">密码 <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="dsPassword" required>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-outline-primary" onclick="testDataSourceConnection()">
+                    <i class="bi bi-check-circle"></i> 测试连接
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveDataSource()">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 弹框容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/datasource.js"></script>
+</body>
+</html>
