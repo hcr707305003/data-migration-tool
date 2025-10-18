@@ -67,8 +67,9 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
+            ${{ runner.os }}-go-${{ env.GO_VERSION }}-
             ${{ runner.os }}-go-
 
       - name: Download dependencies
@@ -89,7 +90,13 @@ jobs:
           fi
 
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
+        run: |
+          # 清理可能存在的测试文件
+          find . -name "*.test" -delete 2>/dev/null || true
+          find . -name "coverage.out" -delete 2>/dev/null || true
+          
+          # 运行测试
+          go test -v -race -coverprofile=coverage.out ./...
         env:
           CGO_ENABLED: 1
 
@@ -113,6 +120,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: Clean build directory
+        run: |
+          rm -rf build
+          mkdir -p build
 
       - name: Build for Linux
         run: |
@@ -153,11 +165,21 @@ jobs:
       - name: Create release archives
         run: |
           cd build
+          # 清理可能存在的旧文件
+          rm -f *.tar.gz *.zip
+          
+          # 设置文件权限
+          chmod +x data-migration-tool-linux-* data-migration-tool-darwin-* 2>/dev/null || true
+          
+          # 创建压缩包
           tar -czf data-migration-tool-linux-amd64.tar.gz data-migration-tool-linux-amd64
           tar -czf data-migration-tool-linux-arm64.tar.gz data-migration-tool-linux-arm64
           zip data-migration-tool-windows-amd64.zip data-migration-tool-windows-amd64.exe
           tar -czf data-migration-tool-darwin-amd64.tar.gz data-migration-tool-darwin-amd64
           tar -czf data-migration-tool-darwin-arm64.tar.gz data-migration-tool-darwin-arm64
+          
+          # 验证文件创建
+          ls -la *.tar.gz *.zip
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
