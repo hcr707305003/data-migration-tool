@@ -1,8 +1,13 @@
-# Data Migration Tool v1.0.0
+# Data Migration Tool v1.0.2
 
-## 🎉 首次发布
+## 🔧 修复版本
 
-这是数据迁移工具的首个正式版本，提供了强大的数据库迁移功能和现代化的Web管理界面。
+修复了CI/CD权限问题，现在可以正常自动构建和发布。
+
+### 🐛 修复内容
+- 修复GitHub Actions权限问题，解决"Resource not accessible by integration"错误
+- 优化发布流程，确保构建产物能正确上传到Release
+- 改进一键发布脚本的网络错误处理
 
 ## ✨ 主要特性
 
