@@ -42,6 +42,23 @@ type MigrationService struct {
 	maxConcurrentBatch  int // 每个表最大并发批次数
 }
 
+// formatCondition 格式化过滤条件，正确处理IN和NOT IN操作符
+func formatCondition(condition models.FilterCondition) string {
+	operator := strings.ToUpper(condition.Operator)
+	if operator == "IN" || operator == "NOT IN" {
+		// IN和NOT IN操作符不需要给值加引号，值应该已经包含括号
+		condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
+		log.Printf("DEBUG: IN操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s", 
+			condition.Field, condition.Operator, condition.Value, condStr)
+		return condStr
+	} else {
+		condStr := fmt.Sprintf("%s %s '%s'", condition.Field, condition.Operator, condition.Value)
+		log.Printf("DEBUG: 普通操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s", 
+			condition.Field, condition.Operator, condition.Value, condStr)
+		return condStr
+	}
+}
+
 func NewMigrationService(store *storage.JSONStorage, cfg *config.Config) *MigrationService {
 	return &MigrationService{
 		store:        store,
@@ -376,7 +393,7 @@ func (s *MigrationService) buildWhereClauseFromConfig(tableConfig models.Migrati
 
 	// 添加自定义条件
 	for _, condition := range tableConfig.CustomConditions {
-		condStr := fmt.Sprintf("%s %s '%s'", condition.Field, condition.Operator, condition.Value)
+		condStr := formatCondition(condition)
 		conditions = append(conditions, condStr)
 	}
 
@@ -391,7 +408,7 @@ func (s *MigrationService) buildWhereClauseFromConfig(tableConfig models.Migrati
 			for _, template := range templates {
 				if template.ID == templateID {
 					for _, condition := range template.Conditions {
-						condStr := fmt.Sprintf("%s %s '%s'", condition.Field, condition.Operator, condition.Value)
+						condStr := formatCondition(condition)
 						conditions = append(conditions, condStr)
 					}
 					break
@@ -891,7 +908,7 @@ func (s *MigrationService) buildWhereClause(tableMigration models.TableMigration
 
 	// 添加表级条件
 	for _, condition := range tableMigration.Conditions {
-		condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
+		condStr := formatCondition(condition)
 		conditions = append(conditions, condStr)
 	}
 
@@ -906,7 +923,7 @@ func (s *MigrationService) buildWhereClause(tableMigration models.TableMigration
 			for _, template := range templates {
 				if template.ID == templateID {
 					for _, condition := range template.Conditions {
-						condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
+						condStr := formatCondition(condition)
 						conditions = append(conditions, condStr)
 					}
 					break

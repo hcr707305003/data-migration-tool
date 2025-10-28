@@ -863,11 +863,20 @@ function addCustomConditionToTable(tableIndex) {
     return;
   }
 
+  // 处理IN操作符的值格式
+  let processedValue = value;
+  if (operator.toUpperCase() === 'IN' || operator.toUpperCase() === 'NOT IN') {
+    // 如果值不是以括号开头，自动添加括号
+    if (!value.startsWith('(')) {
+      processedValue = `(${value})`;
+    }
+  }
+
   // 添加条件
   const condition = {
     field: field,
     operator: operator,
-    value: value,
+    value: processedValue,
     logic: logic,
   };
 

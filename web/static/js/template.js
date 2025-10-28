@@ -259,7 +259,15 @@ async function saveFilterTemplate() {
         const logic = row.querySelector('[data-field="logic"]').value;
         
         if (field && operator && value) {
-            conditions.push({ field, operator, value, logic });
+            // 处理IN操作符的值格式
+            let processedValue = value;
+            if (operator.toUpperCase() === 'IN' || operator.toUpperCase() === 'NOT IN') {
+                // 如果值不是以括号开头，自动添加括号
+                if (!value.startsWith('(')) {
+                    processedValue = `(${value})`;
+                }
+            }
+            conditions.push({ field, operator, value: processedValue, logic });
         }
     });
     
