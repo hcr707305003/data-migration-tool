@@ -48,12 +48,12 @@ func formatCondition(condition models.FilterCondition) string {
 	if operator == "IN" || operator == "NOT IN" {
 		// IN和NOT IN操作符不需要给值加引号，值应该已经包含括号
 		condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
-		log.Printf("DEBUG: IN操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s", 
+		log.Printf("DEBUG: IN操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s",
 			condition.Field, condition.Operator, condition.Value, condStr)
 		return condStr
 	} else {
 		condStr := fmt.Sprintf("%s %s '%s'", condition.Field, condition.Operator, condition.Value)
-		log.Printf("DEBUG: 普通操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s", 
+		log.Printf("DEBUG: 普通操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s",
 			condition.Field, condition.Operator, condition.Value, condStr)
 		return condStr
 	}
