@@ -45,7 +45,7 @@ function renderFilterTemplates() {
         const conditionsPreview = getConditionsPreview(template.conditions);
         
         col.innerHTML = `
-            <div class="card template-card" onclick="copyFilterTemplate('${template.id}')">
+            <div class="card template-card" onclick="showFilterTemplateModal('${template.id}')">
                 <div class="card-header">
                     <div class="template-icon">
                         <i class="bi bi-funnel-fill"></i>

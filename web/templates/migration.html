@@ -55,47 +55,29 @@
         .selected-table-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin-bottom: 4px;
-            background: rgba(25, 135, 84, 0.1);
+            align-items: flex-start;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: rgba(25, 135, 84, 0.08);
             border: 1px solid rgba(25, 135, 84, 0.2);
-            border-radius: 4px;
-            font-size: 0.9rem;
-            word-break: break-all;
+            border-radius: 6px;
             transition: all 0.2s ease;
+            gap: 12px;
         }
         
         .selected-table-item:hover {
-            background: rgba(25, 135, 84, 0.15);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: rgba(25, 135, 84, 0.12);
+            border-color: rgba(25, 135, 84, 0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         
-        .selected-table-name {
-            flex: 1;
-            margin-right: 8px;
-            font-weight: 500;
-            color: #198754;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .selected-table-item .btn-sm {
             white-space: nowrap;
+            min-width: 32px;
         }
         
-        .selected-table-remove {
-            flex-shrink: 0;
-            background: none;
-            border: none;
-            color: #dc3545;
-            font-size: 0.8rem;
-            padding: 2px 6px;
-            border-radius: 3px;
-            transition: all 0.2s ease;
-        }
-        
-        .selected-table-remove:hover {
-            background: rgba(220, 53, 69, 0.1);
-            color: #dc3545;
+        .selected-table-item .btn-sm:hover {
+            transform: translateY(-1px);
         }
         
         /* 自定义滚动条 */
@@ -249,8 +231,13 @@
     
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">
-                <h5>已选择的表 <span id="selectedTableCount" class="badge bg-primary">0</span></h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">已选择的表 <span id="selectedTableCount" class="badge bg-primary">0</span></h5>
+                <div class="btn-group">
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearAllSelectedTables()" title="清空所有已选择的表">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div id="selectedTables" class="table-container">

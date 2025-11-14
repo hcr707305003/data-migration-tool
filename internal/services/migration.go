@@ -305,6 +305,12 @@ func (s *MigrationService) migrateTableFromConfig(task *models.MigrationTask, ta
 		return fmt.Errorf("创建目标表失败: %v", err)
 	}
 
+	// 如果不需要同步数据，只创建表结构即可
+	if !tableConfig.SyncData {
+		log.Printf("表 %s 设置为仅同步结构，跳过数据迁移", tableConfig.Name)
+		return nil
+	}
+
 	// 构建查询SQL
 	selectFields := make([]string, 0, len(sourceColumns))
 	for _, col := range sourceColumns {
@@ -1862,6 +1868,12 @@ func (s *MigrationService) migrateTableConcurrently(task *models.MigrationTask, 
 	// 检查并创建目标表
 	if err := s.ensureTargetTableExists(sourceDB, targetDB, tableConfig.Name, sourceDS, targetDS, tableStrategy); err != nil {
 		return fmt.Errorf("创建目标表失败: %v", err)
+	}
+
+	// 如果不需要同步数据，只创建表结构即可
+	if !tableConfig.SyncData {
+		log.Printf("表 %s 设置为仅同步结构，跳过数据迁移", tableConfig.Name)
+		return nil
 	}
 
 	// 构建查询条件

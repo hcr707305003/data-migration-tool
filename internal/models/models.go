@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -114,6 +115,32 @@ type MigrationTableConfig struct {
 	FilterTemplates  []string               `json:"filterTemplates"`
 	CustomConditions []FilterCondition      `json:"customConditions"`
 	MaskingRules     map[string]interface{} `json:"maskingRules"`
+	SyncData         bool                   `json:"syncData"` // 是否同步数据，默认为true
+}
+
+// UnmarshalJSON 自定义JSON反序列化，处理syncData的默认值
+func (m *MigrationTableConfig) UnmarshalJSON(data []byte) error {
+	// 定义一个临时结构体，SyncData使用指针类型
+	type Alias MigrationTableConfig
+	aux := &struct {
+		SyncData *bool `json:"syncData"`
+		*Alias
+	}{
+		Alias: (*Alias)(m),
+	}
+	
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	
+	// 如果syncData字段不存在（nil），设置默认值为true
+	if aux.SyncData == nil {
+		m.SyncData = true
+	} else {
+		m.SyncData = *aux.SyncData
+	}
+	
+	return nil
 }
 
 // 旧版本迁移任务（用于数据兼容性）
