@@ -128,18 +128,18 @@ func (m *MigrationTableConfig) UnmarshalJSON(data []byte) error {
 	}{
 		Alias: (*Alias)(m),
 	}
-	
+
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	
+
 	// 如果syncData字段不存在（nil），设置默认值为true
 	if aux.SyncData == nil {
 		m.SyncData = true
 	} else {
 		m.SyncData = *aux.SyncData
 	}
-	
+
 	return nil
 }
 
