@@ -42,17 +42,25 @@ type MigrationService struct {
 	maxConcurrentBatch  int // 每个表最大并发批次数
 }
 
+// quoteIdentifier 给MySQL标识符（表名、列名）添加反引号，避免保留字冲突
+func quoteIdentifier(identifier string) string {
+	// 如果已经有反引号，先去掉
+	identifier = strings.Trim(identifier, "`")
+	return fmt.Sprintf("`%s`", identifier)
+}
+
 // formatCondition 格式化过滤条件，正确处理IN和NOT IN操作符
 func formatCondition(condition models.FilterCondition) string {
 	operator := strings.ToUpper(condition.Operator)
+	quotedField := quoteIdentifier(condition.Field)
 	if operator == "IN" || operator == "NOT IN" {
 		// IN和NOT IN操作符不需要给值加引号，值应该已经包含括号
-		condStr := fmt.Sprintf("%s %s %s", condition.Field, condition.Operator, condition.Value)
+		condStr := fmt.Sprintf("%s %s %s", quotedField, condition.Operator, condition.Value)
 		log.Printf("DEBUG: IN操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s",
 			condition.Field, condition.Operator, condition.Value, condStr)
 		return condStr
 	} else {
-		condStr := fmt.Sprintf("%s %s '%s'", condition.Field, condition.Operator, condition.Value)
+		condStr := fmt.Sprintf("%s %s '%s'", quotedField, condition.Operator, condition.Value)
 		log.Printf("DEBUG: 普通操作符条件 - 字段: %s, 操作符: %s, 值: %s, 生成条件: %s",
 			condition.Field, condition.Operator, condition.Value, condStr)
 		return condStr
@@ -314,10 +322,10 @@ func (s *MigrationService) migrateTableFromConfig(task *models.MigrationTask, ta
 	// 构建查询SQL
 	selectFields := make([]string, 0, len(sourceColumns))
 	for _, col := range sourceColumns {
-		selectFields = append(selectFields, col.Name)
+		selectFields = append(selectFields, quoteIdentifier(col.Name))
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selectFields, ", "), tableConfig.Name)
+	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selectFields, ", "), quoteIdentifier(tableConfig.Name))
 	if whereClause != "" {
 		query += " WHERE " + whereClause
 	}
@@ -605,7 +613,7 @@ func (s *MigrationService) insertBatchSimple(db *sql.DB, tableName string, sourc
 	var validColumnIndexes []int
 	for i, col := range sourceColumns {
 		if !col.Generated {
-			fields = append(fields, col.Name)
+			fields = append(fields, quoteIdentifier(col.Name))
 			validColumnIndexes = append(validColumnIndexes, i)
 		}
 	}
@@ -618,7 +626,7 @@ func (s *MigrationService) insertBatchSimple(db *sql.DB, tableName string, sourc
 
 	// 使用 INSERT IGNORE 来跳过重复记录，或者使用 ON DUPLICATE KEY UPDATE
 	insertSQL := fmt.Sprintf("INSERT IGNORE INTO %s (%s) VALUES (%s)",
-		tableName,
+		quoteIdentifier(tableName),
 		strings.Join(fields, ", "),
 		strings.Join(placeholders, ", "))
 
@@ -739,7 +747,7 @@ func (s *MigrationService) executeTask(task *models.MigrationTask, stopChan chan
 		}
 
 		// 计算记录数
-		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableConfig.Name)
+		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", quoteIdentifier(tableConfig.Name))
 		if whereClause != "" {
 			countQuery += " WHERE " + whereClause
 		}
@@ -824,10 +832,10 @@ func (s *MigrationService) migrateTable(task *models.MigrationTask, tableMigrati
 	// 构建查询SQL
 	selectFields := make([]string, 0, len(sourceColumns))
 	for _, col := range sourceColumns {
-		selectFields = append(selectFields, col.Name)
+		selectFields = append(selectFields, quoteIdentifier(col.Name))
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selectFields, ", "), tableMigration.SourceTable)
+	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selectFields, ", "), quoteIdentifier(tableMigration.SourceTable))
 	if whereClause != "" {
 		query += " WHERE " + whereClause
 	}
@@ -1313,9 +1321,9 @@ func (s *MigrationService) insertBatch(db *sql.DB, tableName string, sourceColum
 	for i, col := range sourceColumns {
 		if !col.Generated {
 			if targetField, exists := fieldMap[col.Name]; exists {
-				targetFields = append(targetFields, targetField)
+				targetFields = append(targetFields, quoteIdentifier(targetField))
 			} else {
-				targetFields = append(targetFields, col.Name)
+				targetFields = append(targetFields, quoteIdentifier(col.Name))
 			}
 			validColumnIndexes = append(validColumnIndexes, i)
 		}
@@ -1328,7 +1336,7 @@ func (s *MigrationService) insertBatch(db *sql.DB, tableName string, sourceColum
 	}
 
 	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-		tableName,
+		quoteIdentifier(tableName),
 		strings.Join(targetFields, ", "),
 		strings.Join(placeholders, ", "))
 
@@ -1439,7 +1447,7 @@ func (s *MigrationService) ensureTargetTableExists(sourceDB, targetDB *sql.DB, t
 
 // isTableEmpty 检查表是否为空
 func (s *MigrationService) isTableEmpty(db *sql.DB, tableName string) (bool, error) {
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s LIMIT 1", tableName)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s LIMIT 1", quoteIdentifier(tableName))
 	var count int
 	err := db.QueryRow(query).Scan(&count)
 	if err != nil {
@@ -1608,10 +1616,12 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 
 	// 构建字段列表，跳过生成列
 	var fields []string
+	var fieldNames []string // 保存原始字段名用于VALUES()函数
 	var validColumnIndexes []int
 	for i, col := range sourceColumns {
 		if !col.Generated {
-			fields = append(fields, col.Name)
+			fields = append(fields, quoteIdentifier(col.Name))
+			fieldNames = append(fieldNames, col.Name)
 			validColumnIndexes = append(validColumnIndexes, i)
 		}
 	}
@@ -1629,20 +1639,21 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 	case "ignore":
 		// 跳过重复记录
 		insertSQL = fmt.Sprintf("INSERT IGNORE INTO %s (%s) VALUES (%s)",
-			tableName,
+			quoteIdentifier(tableName),
 			strings.Join(fields, ", "),
 			strings.Join(placeholders, ", "))
 	case "replace":
 		// 替换重复记录
 		insertSQL = fmt.Sprintf("REPLACE INTO %s (%s) VALUES (%s)",
-			tableName,
+			quoteIdentifier(tableName),
 			strings.Join(fields, ", "),
 			strings.Join(placeholders, ", "))
 	case "update":
 		// 更新重复记录
 		updateFields := make([]string, len(fields))
 		for i, field := range fields {
-			if field != "id" { // 假设id是主键，不更新主键
+			fieldName := fieldNames[i]
+			if fieldName != "id" { // 假设id是主键，不更新主键
 				updateFields[i] = fmt.Sprintf("%s = VALUES(%s)", field, field)
 			}
 		}
@@ -1655,20 +1666,20 @@ func (s *MigrationService) insertBatchWithStrategy(db *sql.DB, tableName string,
 		}
 
 		insertSQL = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
-			tableName,
+			quoteIdentifier(tableName),
 			strings.Join(fields, ", "),
 			strings.Join(placeholders, ", "),
 			strings.Join(validUpdateFields, ", "))
 	case "error":
 		// 遇到重复记录就报错（默认INSERT行为）
 		insertSQL = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-			tableName,
+			quoteIdentifier(tableName),
 			strings.Join(fields, ", "),
 			strings.Join(placeholders, ", "))
 	default:
 		// 默认使用ignore策略
 		insertSQL = fmt.Sprintf("INSERT IGNORE INTO %s (%s) VALUES (%s)",
-			tableName,
+			quoteIdentifier(tableName),
 			strings.Join(fields, ", "),
 			strings.Join(placeholders, ", "))
 	}
@@ -1891,10 +1902,10 @@ func (s *MigrationService) migrateTableConcurrently(task *models.MigrationTask, 
 	// 构建查询语句
 	var fields []string
 	for _, col := range sourceColumns {
-		fields = append(fields, col.Name)
+		fields = append(fields, quoteIdentifier(col.Name))
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(fields, ", "), tableConfig.Name)
+	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(fields, ", "), quoteIdentifier(tableConfig.Name))
 	if whereClause != "" {
 		query += " WHERE " + whereClause
 	}
